@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 
 import { DebugPanel, type SettingKey } from '../debug/DebugPanel';
+import type { CameraView, DebugFlagKey, VoxelDebugApi } from '../debug/DevApi';
 import { PerformanceMonitor } from '../debug/PerformanceMonitor';
 import { MAX_NON_INSTANCED_ANTS } from '../rendering/InstanceManager';
 import { DEFAULT_ANT_COUNT, DEFAULT_FLOWER_COUNT, World } from '../world/World';
@@ -67,6 +68,8 @@ export class Game {
       this.scene,
       this.debugPanel.readout,
     );
+
+    this.installDebugApi();
 
     window.addEventListener('resize', this.handleResize);
     window.addEventListener('keydown', this.handleKeyDown);
@@ -136,6 +139,47 @@ export class Game {
         break;
     }
   };
+
+  /**
+   * 只在 dev server 註冊除錯 API，供自動截圖 / 驗證腳本使用。
+   * Production build 不會包含這段（`import.meta.env.DEV` 會被靜態替換）。
+   */
+  private installDebugApi(): void {
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
+    const api: VoxelDebugApi = {
+      setCamera: ({ position, target }: CameraView) => {
+        this.camera.position.set(position[0], position[1], position[2]);
+        this.camera.lookAt(target[0], target[1], target[2]);
+      },
+      setAntCount: (count: number) => {
+        this.debugPanel.settings.antCount = count;
+        this.debugPanel.refreshDisplay();
+        this.handleSettingChange('antCount');
+      },
+      setFlowerCount: (count: number) => {
+        this.debugPanel.settings.flowerCount = count;
+        this.debugPanel.refreshDisplay();
+        this.handleSettingChange('flowerCount');
+      },
+      setFlag: (key: DebugFlagKey, value: boolean) => {
+        this.debugPanel.settings[key] = value;
+        this.debugPanel.refreshDisplay();
+        this.handleSettingChange(key);
+      },
+      getStats: () => ({
+        drawCalls: this.renderer.info.render.calls,
+        triangles: this.renderer.info.render.triangles,
+        visibleAnts: this.world.ants.visibleCount,
+        fps: this.debugPanel.readout.fps,
+        frameTime: this.debugPanel.readout.frameTime,
+      }),
+    };
+
+    (window as unknown as { __voxel?: VoxelDebugApi }).__voxel = api;
+  }
 
   private applyShadows(enabled: boolean): void {
     this.renderer.shadowMap.enabled = enabled;
