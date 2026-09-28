@@ -1,11 +1,14 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 
-import { buildWorld } from '../world/World';
+import { DebugPanel, type SettingKey } from '../debug/DebugPanel';
+import { PerformanceMonitor } from '../debug/PerformanceMonitor';
+import { MAX_NON_INSTANCED_ANTS } from '../rendering/InstanceManager';
+import { DEFAULT_ANT_COUNT, DEFAULT_FLOWER_COUNT, World } from '../world/World';
 
 /**
  * Game —— 唯一持有 renderer / scene / camera 的地方（避免 global mutable state）。
- * 負責渲染迴圈與自由攝影機。
+ * 負責渲染迴圈、自由攝影機，以及把所有子系統接起來。
  */
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
@@ -15,6 +18,11 @@ export class Game {
   private readonly container: HTMLElement;
   private readonly keys = new Set<string>();
   private readonly clock = new THREE.Clock();
+
+  private readonly world: World;
+  private readonly debugPanel: DebugPanel;
+  private readonly performanceMonitor: PerformanceMonitor;
+  private readonly sun: THREE.DirectionalLight;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -36,11 +44,29 @@ export class Game {
     this.camera.position.set(38, 30, 58);
 
     this.controls = new PointerLockControls(this.camera, this.renderer.domElement);
-    this.controls.getObject().position.copy(this.camera.position);
     this.scene.add(this.controls.getObject());
 
-    this.setupLighting();
-    buildWorld(this.scene);
+    this.sun = this.setupLighting();
+    this.world = new World(this.scene);
+
+    this.debugPanel = new DebugPanel(
+      {
+        antCount: DEFAULT_ANT_COUNT,
+        flowerCount: DEFAULT_FLOWER_COUNT,
+        instancing: true,
+        lod: true,
+        distanceCulling: true,
+        shadows: false,
+        wireframe: false,
+      },
+      this.handleSettingChange,
+    );
+
+    this.performanceMonitor = new PerformanceMonitor(
+      this.renderer,
+      this.scene,
+      this.debugPanel.readout,
+    );
 
     window.addEventListener('resize', this.handleResize);
     window.addEventListener('keydown', this.handleKeyDown);
@@ -52,23 +78,86 @@ export class Game {
     this.renderer.setAnimationLoop(this.update);
   }
 
-  private setupLighting(): void {
-    const hemisphere = new THREE.HemisphereLight(0xffffff, 0x4a5a4a, 1.1);
-    this.scene.add(hemisphere);
+  private setupLighting(): THREE.DirectionalLight {
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x4a5a4a, 1.1));
 
     const sun = new THREE.DirectionalLight(0xffffff, 2.0);
     sun.position.set(80, 140, 60);
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -120;
+    sun.shadow.camera.right = 120;
+    sun.shadow.camera.top = 120;
+    sun.shadow.camera.bottom = -120;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 400;
     this.scene.add(sun);
+    return sun;
+  }
+
+  /** Debug UI 的所有變更都集中在這裡，避免散落各處。 */
+  private readonly handleSettingChange = (key: SettingKey): void => {
+    const settings = this.debugPanel.settings;
+
+    switch (key) {
+      case 'antCount': {
+        const requested = settings.antCount;
+        if (!settings.instancing && requested > MAX_NON_INSTANCED_ANTS) {
+          this.debugPanel.setNote(`Instancing OFF：已限制為 ${MAX_NON_INSTANCED_ANTS} 隻`);
+        } else {
+          this.debugPanel.setNote('');
+        }
+        this.world.ants.setCount(requested);
+        break;
+      }
+      case 'flowerCount':
+        this.world.setFlowerCount(settings.flowerCount);
+        break;
+      case 'instancing':
+        if (!settings.instancing && settings.antCount > MAX_NON_INSTANCED_ANTS) {
+          this.debugPanel.setNote(`Instancing OFF：已限制為 ${MAX_NON_INSTANCED_ANTS} 隻`);
+        } else {
+          this.debugPanel.setNote('');
+        }
+        this.world.ants.setInstancing(settings.instancing);
+        break;
+      case 'lod':
+        this.world.ants.setLodEnabled(settings.lod);
+        break;
+      case 'distanceCulling':
+        this.world.setDistanceCulling(settings.distanceCulling);
+        break;
+      case 'shadows':
+        this.applyShadows(settings.shadows);
+        break;
+      case 'wireframe':
+        this.world.material.wireframe = settings.wireframe;
+        break;
+      default:
+        break;
+    }
+  };
+
+  private applyShadows(enabled: boolean): void {
+    this.renderer.shadowMap.enabled = enabled;
+    this.renderer.shadowMap.needsUpdate = true;
+    this.sun.castShadow = enabled;
+    this.world.setShadowsEnabled(enabled);
   }
 
   private readonly update = (): void => {
     const delta = Math.min(this.clock.getDelta(), 0.1);
     this.moveCamera(delta);
+    this.world.update(this.camera.position);
+
+    this.performanceMonitor.begin();
     this.renderer.render(this.scene, this.camera);
+    this.performanceMonitor.end();
+
+    this.debugPanel.readout.ants = this.world.ants.visibleCount;
   };
 
   private moveCamera(delta: number): void {
-    const speed = (this.keys.has('shiftleft') ? 60 : 24) * delta;
+    const speed = (this.keys.has('shiftleft') ? 90 : 30) * delta;
     const forward = new THREE.Vector3();
     this.camera.getWorldDirection(forward);
 

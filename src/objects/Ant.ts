@@ -35,3 +35,17 @@ export function createAntModel(): VoxelModel {
 
   return { primitives };
 }
+
+/**
+ * Ant 的 LOD1 簡化版：只留三節身體。
+ * 距離較遠、細節看不見時改用它，大幅降低三角形數量。
+ */
+export function createAntLodModel(): VoxelModel {
+  const primitives: Primitive[] = [
+    boxOnFloor(-1.3, 0.15, 0, 1.3, 1.3, 1.3, BODY),
+    boxOnFloor(0, 0.25, 0, 1, 1, 1, BODY_DARK),
+    boxOnFloor(1.1, 0.2, 0, 1.1, 1.1, 1.1, BODY),
+  ];
+
+  return { primitives };
+}
