@@ -92,11 +92,25 @@ export class InstanceManager {
     this.apply();
   }
 
-  /** 目前實際送出的個體數（供 Debug UI 顯示）。 */
+  /**
+   * 目前實際送出渲染的個體數（供 Debug UI 顯示）。
+   * Instancing ON 時是兩個 InstancedMesh 的 instance 總數；
+   * OFF 時是真正設為 visible 的 fallback mesh 數量（已扣掉距離剔除與安全上限）。
+   */
   get visibleCount(): number {
-    return this.instancing
-      ? this.detailed.count + this.simplified.count
-      : Math.min(this.count, MAX_NON_INSTANCED_ANTS);
+    if (this.instancing) {
+      return this.detailed.count + this.simplified.count;
+    }
+    if (!this.fallbackMeshes) {
+      return 0;
+    }
+    let visible = 0;
+    for (const mesh of this.fallbackMeshes) {
+      if (mesh.visible) {
+        visible += 1;
+      }
+    }
+    return visible;
   }
 
   private createInstancedMesh(
