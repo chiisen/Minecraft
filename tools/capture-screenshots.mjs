@@ -38,6 +38,7 @@ const VIEWPORT = { width: 1600, height: 900 };
  * 截圖清單。order 決定檔名前綴。
  *
  * 每個 shot 都明確指定 antCount / flowerCount，讓每張圖可重現、互不污染。
+ * 需要時可用 flags 覆寫單一渲染開關（例如 ant-field 要關掉距離剔除才看得到完整分佈）。
  * 鏡頭位置都是刻意挑過的：
  * - 花的分佈是半徑 8~50 的圓環，相機必須避開（否則會貼在花上），
  *   或直接把 flowerCount 設 0。
@@ -50,7 +51,7 @@ const SHOTS = [
     note: '預設俯瞰視角，含 ground / house / tree / flower / character / ant',
     antCount: 100,
     flowerCount: 50,
-    view: { position: [38, 30, 58], target: [0, 8, 0] },
+    view: { position: [42, 34, 66], target: [0, 8, 0] },
   },
   {
     name: 'scale-lineup',
@@ -61,10 +62,10 @@ const SHOTS = [
   },
   {
     name: 'house-facade',
-    note: 'House 正面（門面在 +z 側）',
+    note: 'House 正面（門面在 +z 側）。相機必須避開 Tree#2 的樹冠（z 25.7~40.1），否則會拍進樹冠內部',
     antCount: 0,
     flowerCount: 0,
-    view: { position: [-22, 12, 30], target: [-22, 9, -12] },
+    view: { position: [-22, 13, 20], target: [-22, 9, -12] },
   },
   {
     name: 'character-full',
@@ -82,10 +83,10 @@ const SHOTS = [
   },
   {
     name: 'tree',
-    note: 'Tree 混合尺度（樹幹 4 → 枝幹 2 → 樹葉 1）',
+    note: 'Tree 混合尺度（樹幹 4 → 枝幹 2.5 → 樹葉 2.1~2.6），檢查樹冠是否成形',
     antCount: 0,
     flowerCount: 0,
-    view: { position: [34, 22, 42], target: [34, 13, 0] },
+    view: { position: [41, 26, 42], target: [38, 14, 0] },
   },
   {
     name: 'flowers-ground',
@@ -96,17 +97,18 @@ const SHOTS = [
   },
   {
     name: 'ant-field',
-    note: '螞蟻群落（10,000 隻）：整體密度與分佈',
+    note: '螞蟻群落（10,000 隻）：活動半徑 140。關閉距離剔除才看得到完整分佈，否則只會拍到相機附近的一小塊',
     antCount: 10_000,
     flowerCount: 50,
-    view: { position: [0, 24, 70], target: [0, 0, 0] },
+    flags: { distanceCulling: false },
+    view: { position: [0, 300, 80], target: [0, 0, 0] },
   },
   {
     name: 'ant-closeup',
-    note: '螞蟻近距離（1,000 隻）：檢查單一個體的身體構造是否可辨識',
+    note: '螞蟻近距離（1,000 隻）：鏡頭對準編號 #7 的個體（位置 x=8.16 z=48.50，朝向約 75.7°），採 3/4 前側視角，才看得到頭部觸角與三節身體',
     antCount: 1000,
     flowerCount: 0,
-    view: { position: [0, 3, 62], target: [0, 0.8, 52] },
+    view: { position: [16.1, 3.2, 43.8], target: [8.16, 1.0, 48.5] },
   },
 ];
 
@@ -127,6 +129,18 @@ const STATS_MATRIX = [
 ];
 
 const STATS_VIEW = { position: [0, 20, 40], target: [0, 0, 0] };
+
+/**
+ * 每個 shot 開始前先還原的預設渲染開關，
+ * 避免上一個 shot 的 flags 覆寫污染下一個 shot。
+ */
+const DEFAULT_FLAGS = {
+  instancing: true,
+  lod: true,
+  distanceCulling: true,
+  shadows: false,
+  wireframe: false,
+};
 
 function waitForServer(url, timeoutMs = 30_000) {
   const deadline = Date.now() + timeoutMs;
@@ -224,6 +238,9 @@ async function main() {
     let index = 0;
     for (const shot of SHOTS) {
       index += 1;
+      for (const [key, value] of Object.entries({ ...DEFAULT_FLAGS, ...shot.flags })) {
+        await page.evaluate(([k, v]) => window.__voxel.setFlag(k, v), [key, value]);
+      }
       if (shot.antCount !== undefined) {
         await page.evaluate((n) => window.__voxel.setAntCount(n), shot.antCount);
       }
