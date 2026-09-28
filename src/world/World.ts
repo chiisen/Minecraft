@@ -10,16 +10,30 @@ import { buildVoxelGeometry, buildVoxelMesh, createVoxelMaterial } from '../voxe
 import type { VoxelModel } from '../voxel/Primitive';
 import { createRng, range } from '../voxel/random';
 import { createGround } from './Ground';
+import {
+  CHARACTER_POSITION,
+  HOUSE_POSITION,
+  sampleOpenDisk,
+  sampleOpenRing,
+  treePositions,
+} from './placement';
 
 export const DEFAULT_FLOWER_COUNT = 50;
 export const DEFAULT_ANT_COUNT = 100;
 export const MAX_ANT_COUNT = 10_000;
 
-/** 螞蟻活動範圍（半徑）與距離剔除門檻。 */
-const ANT_FIELD_RADIUS = 100;
-const CULL_DISTANCE = 90;
+/**
+ * 螞蟻活動範圍（半徑）與距離剔除門檻。
+ * 半徑由 100 加大到 140：10,000 隻的平均間距從 1.77 提升到 2.48 單位，
+ * 近距離不再糊成一團（issue #14）。剔除距離隨之調整，仍保留剔除效果。
+ */
+const ANT_FIELD_RADIUS = 140;
+const CULL_DISTANCE = 130;
 const LOD_DISTANCE = 40;
-const TREE_COUNT = 3;
+
+/** 花 / 螞蟻與建築之間的額外淨空，避免貼著牆面生長。 */
+const FLOWER_CLEARANCE = 2.5;
+const ANT_CLEARANCE = 0.6;
 
 /**
  * World —— 只負責「場景內容」。
@@ -43,17 +57,22 @@ export class World {
     scene.add(this.flowerGroup);
 
     // 靜態物件
-    this.addModel(scene, createHouseModel(), -22, -12, 0.4);
-    this.addModel(scene, createCharacterModel(), 10, 6, -0.5);
+    this.addModel(scene, createHouseModel(), HOUSE_POSITION.x, HOUSE_POSITION.z, 0.4);
+    this.addModel(
+      scene,
+      createCharacterModel(),
+      CHARACTER_POSITION.x,
+      CHARACTER_POSITION.z,
+      -0.5,
+    );
 
     const treeRng = createRng(31337);
-    for (let i = 0; i < TREE_COUNT; i += 1) {
-      const angle = (i / TREE_COUNT) * Math.PI * 2;
+    for (const [index, position] of treePositions().entries()) {
       this.addModel(
         scene,
-        createTreeModel(1000 + i),
-        Math.cos(angle) * 34,
-        Math.sin(angle) * 34,
+        createTreeModel(1000 + index),
+        position.x,
+        position.z,
         range(treeRng, 0, Math.PI * 2),
       );
     }
@@ -64,13 +83,8 @@ export class World {
     const antRng = createRng(4242);
     const transforms: AntTransform[] = [];
     for (let i = 0; i < MAX_ANT_COUNT; i += 1) {
-      const angle = range(antRng, 0, Math.PI * 2);
-      const radius = Math.sqrt(antRng()) * ANT_FIELD_RADIUS;
-      transforms.push({
-        x: Math.cos(angle) * radius,
-        z: Math.sin(angle) * radius,
-        rotationY: range(antRng, 0, Math.PI * 2),
-      });
+      const { x, z } = sampleOpenDisk(antRng, ANT_FIELD_RADIUS, ANT_CLEARANCE);
+      transforms.push({ x, z, rotationY: range(antRng, 0, Math.PI * 2) });
     }
 
     this.ants = new InstanceManager(
@@ -98,10 +112,9 @@ export class World {
 
     const rng = createRng(9001);
     for (let i = 0; i < target; i += 1) {
-      const angle = range(rng, 0, Math.PI * 2);
-      const radius = range(rng, 8, 50);
+      const { x, z } = sampleOpenRing(rng, 8, 50, FLOWER_CLEARANCE);
       const mesh = buildVoxelMesh(createFlowerModel(5000 + i), this.material);
-      mesh.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+      mesh.position.set(x, 0, z);
       mesh.rotation.y = range(rng, 0, Math.PI * 2);
       mesh.name = `Flower_${i}`;
       this.flowerGroup.add(mesh);
