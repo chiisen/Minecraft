@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multi-Scale Voxel Web Demo</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0b0e13;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      #app {
+        position: absolute;
+        inset: 0;
+      }
+      #app canvas {
+        display: block;
+      }
+      #hint {
+        position: absolute;
+        left: 16px;
+        bottom: 16px;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background: rgba(12, 16, 22, 0.62);
+        color: #e6edf3;
+        font-size: 13px;
+        line-height: 1.6;
+        pointer-events: none;
+        user-select: none;
+      }
+      #hint strong {
+        color: #7fd1ff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hint">
+      <strong>點擊畫面</strong> 進入滑鼠視角 · <strong>Esc</strong> 離開<br />
+      WASD 移動 · Space / Shift 升降 · 滑鼠轉向
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
