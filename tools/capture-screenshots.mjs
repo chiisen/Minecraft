@@ -308,17 +308,19 @@ async function main() {
     }
 
     console.log('\nPhase 2 Benchmark（SwiftShader，FPS 僅供參考）：');
-    console.log('  case       ants  inst  drawCalls  triangles  visible  objects  geometries  heapMB');
+    console.log(
+      '  case       ants  inst  drawCalls  triangles   vertices  visible  objects  geometries  heapMB',
+    );
     for (const row of stats) {
       const heapMb = row.usedHeapBytes === null ? 'n/a' : (row.usedHeapBytes / 1048576).toFixed(1);
       console.log(
         `  ${String(row.label).padEnd(9)} ${String(row.antCount).padStart(6)}  ${
           row.instancing ? 'ON ' : 'OFF'
         }  ${String(row.drawCalls).padStart(9)}  ${String(row.triangles).padStart(9)}  ${String(
-          row.visibleAnts,
-        ).padStart(7)}  ${String(row.objects).padStart(7)}  ${String(row.geometries).padStart(
-          10,
-        )}  ${heapMb.padStart(6)}`,
+          row.vertices,
+        ).padStart(9)}  ${String(row.visibleAnts).padStart(7)}  ${String(row.objects).padStart(
+          7,
+        )}  ${String(row.geometries).padStart(10)}  ${heapMb.padStart(6)}`,
       );
     }
 

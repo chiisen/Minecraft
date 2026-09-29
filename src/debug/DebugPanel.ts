@@ -19,6 +19,7 @@ export interface DebugReadout {
   fps: number;
   frameTime: number;
   triangles: number;
+  vertices: number;
   drawCalls: number;
   objects: number;
   ants: number;
@@ -37,6 +38,7 @@ export class DebugPanel {
       fps: 0,
       frameTime: 0,
       triangles: 0,
+      vertices: 0,
       drawCalls: 0,
       objects: 0,
       ants: 0,
@@ -107,6 +109,7 @@ export class DebugPanel {
     folder.add(this.readout, 'fps').name('FPS').listen().disable();
     folder.add(this.readout, 'frameTime').name('Frame Time (ms)').listen().disable();
     folder.add(this.readout, 'triangles').name('Triangles').listen().disable();
+    folder.add(this.readout, 'vertices').name('Vertices').listen().disable();
     folder.add(this.readout, 'drawCalls').name('Draw Calls').listen().disable();
     folder.add(this.readout, 'objects').name('Objects').listen().disable();
     folder.add(this.readout, 'ants').name('Visible Ants').listen().disable();

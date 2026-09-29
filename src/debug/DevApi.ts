@@ -24,7 +24,14 @@ export type DebugFlagKey =
 export interface VoxelDebugStats {
   /** `renderer.info.render.calls`，與 GPU 後端無關，可用於比較 Draw Call。 */
   readonly drawCalls: number;
+  /** `renderer.info.render.triangles`。 */
   readonly triangles: number;
+  /**
+   * 本幀實際送入 GPU 的頂點數（PRD §15 要求記錄 Vertices）。
+   * `renderer.info` 不提供此欄位，由 Game 從各可見 Mesh 的 position attribute 加總，
+   * InstancedMesh 會乘上實例數。
+   */
+  readonly vertices: number;
   readonly visibleAnts: number;
   readonly fps: number;
   readonly frameTime: number;

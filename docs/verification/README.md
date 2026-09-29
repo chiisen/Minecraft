@@ -2,12 +2,19 @@
 
 本目錄的截圖與 `report.json` 全部由 `tools/capture-screenshots.mjs` 自動產生，可重現。
 
+> ⚠️ **這份報告的 FPS / Frame Time 沒有參考價值**——自動驗證跑在 headless Chromium +
+> SwiftShader（CPU 軟體渲染）。PRD §21 的 60 FPS 驗收必須在真實 GPU 上做，
+> 步驟見 **[`ON-DEVICE-MEASUREMENT.md`](ON-DEVICE-MEASUREMENT.md)**（issue #8）。
+> 與 GPU 無關的結構數字（draw call / triangles / vertices / objects / geometries）可直接引用。
+
 對應 GitHub issues：
 
 - [#3](https://github.com/chiisen/Minecraft/issues/3) Phase 1 視覺驗證（截圖）
 - [#4](https://github.com/chiisen/Minecraft/issues/4) Phase 2 效能 Benchmark（Case A/B/C）
 - [#5](https://github.com/chiisen/Minecraft/issues/5) Phase 3 Character 粗 / 細對照實驗
 - [#6](https://github.com/chiisen/Minecraft/issues/6) Phase 4 依 Benchmark 決定最佳化項目
+- [#7](https://github.com/chiisen/Minecraft/issues/7) 尺度決策（House > Human）
+- [#8](https://github.com/chiisen/Minecraft/issues/8) 實機 GPU 效能（Shadows ON）
 - [#9](https://github.com/chiisen/Minecraft/issues/9) Phase 5 Review（回答 PRD 7 個問題）
 
 ## 怎麼跑
@@ -25,8 +32,12 @@ npm run screenshots
 1. 啟動 vite dev server（port 5197）——只有 dev 模式會註冊 `window.__voxel` 除錯 API。
 2. 用 headless Chromium + SwiftShader 開頁面。
 3. 透過除錯 API 精準設定鏡頭與場景參數，逐一截圖到本目錄。
-4. 量測 Phase 2 Benchmark：Case A/B/C × Instancing ON/OFF 的 draw call、三角形、物件數、記憶體。
+4. 量測 Phase 2 Benchmark：Case A/B/C × Instancing ON/OFF 的 draw call、三角形、
+   頂點數、可見物件數、記憶體（PRD §15 要求的欄位）。
 5. 檢查每張圖是否為空白帧，並輸出 `report.json`。
+
+> **想在真實 GPU 上跑同一份量測？** 見
+> [`ON-DEVICE-MEASUREMENT.md`](ON-DEVICE-MEASUREMENT.md) 第 7 節。
 
 ## 為什麼用 headless
 
@@ -77,34 +88,48 @@ Instancing ON / OFF。欄位定義：
 
 - **drawCalls / triangles**：來自 `renderer.info.render`，是**整帧總量**，含場景其他物件。
   第一列 `antCount = 0` 是基準線，用來扣掉場景本身（ground / house / tree / flower / character）。
+- **vertices**：本幀實際送入 GPU 的頂點數（PRD §15 要求）。`renderer.info` 不提供此欄位，
+  由 `countVertices` 從各 Mesh 的 position attribute 加總，`InstancedMesh` 乘上實例數，
+  並**先做 frustum culling 判定**以與 triangles 保持同一語意。
 - **visible**：實際送入 GPU 的螞蟻數（已扣距離剔除與安全上限）。
 - **objects**：場景中 `THREE.Mesh` 的總數（`countMeshes`）。
 - **geometries / textures**：`renderer.info.memory`。
 - **heapMB**：`performance.memory.usedJSHeapSize`（Chrome 專屬）。**此值被 Chrome 量化成
   固定桶**（本輪全部回報 10,000,000 B），解析度不足，**不可用來做 Case 間比較**。
 
-| case | 螞蟻數 | Instancing | Draw calls | Triangles | visible | objects | geometries | heapMB |
-|---|---:|---|---:|---:|---:|---:|---:|---:|
-| baseline | 0 | ON | 19 | 10,874 | 0 | 23 | 22 | 9.5 |
-| A ON | 100 | ON | 21 | 14,402 | 70 | 23 | 22 | 9.5 |
-| A OFF | 100 | OFF | 41 | 14,834 | 70 | 1,023 | 22 | 9.5 |
-| B ON | 1,000 | ON | 21 | 48,818 | 750 | 1,023 | 22 | 9.5 |
-| B OFF | 1,000 | OFF | 216 | 46,334 | 750 | 1,023 | 22 | 9.5 |
-| C ON | 10,000 | ON | **21** | 386,030 | 7,437 | 1,023 | 22 | 9.5 |
-| C OFF | 10,000 | OFF | 216 | 46,334 | 750 | 1,023 | 22 | 9.5 |
+| case | 螞蟻數 | Instancing | Draw calls | Triangles | Vertices | visible | objects | geometries | heapMB |
+|---|---:|---|---:|---:|---:|---:|---:|---:|---:|
+| baseline | 0 | ON | 20 | 10,958 | 21,916 | 0 | 23 | 23 | 9.5 |
+| A ON | 100 | ON | 22 | 14,306 | 28,612 | 65 | 23 | 23 | 9.5 |
+| A OFF | 100 | OFF | 37 | 14,018 | 28,036 | 65 | 1,023 | 23 | 9.5 |
+| B ON | 1,000 | ON | 22 | 47,822 | 95,644 | 740 | 1,023 | 23 | 9.5 |
+| B OFF | 1,000 | OFF | 213 | 45,698 | 91,396 | 740 | 1,023 | 23 | 9.5 |
+| C ON | 10,000 | ON | **22** | 386,798 | 773,596 | 7,392 | 1,023 | 23 | 9.5 |
+| C OFF | 10,000 | OFF | 213 | 45,698 | 91,396 | 740 | 1,023 | 23 | 9.5 |
+
+> **Vertices 的自洽檢查**：所有列的 Vertices : Triangles 皆為 **2 : 1**，與 box 幾何
+> （每面 4 頂點 × 6 面 = 24 頂點、12 三角形）完全吻合，代表 frustum 判定與實例數
+> 都算對了。這個 2:1 比例若不成立，就代表有物件被重複或漏計。
+
+> **量測修正紀錄**：初版的 `countVertices` 只檢查 `object.visible` 旗標，沒有做
+> frustum 判定，導致 `A OFF` 報 45,316 vertices（遠高於實際送 GPU 的 14,018 三角形）。
+> 修正為 frustum-aware 後，數字與 triangles 對得上。
 
 ### 結論
 
-1. **Instancing 讓 draw call 與螞蟻數量脫鉤**：10,000 隻仍然是 **21** 個 draw call
-   （場景 + 花 + 2 個螞蟻 InstancedMesh）。OFF 模式在 1,000 隻就要 **216** 個 draw call。
+1. **Instancing 讓 draw call 與螞蟻數量脫鉤**：10,000 隻仍然是 **22** 個 draw call
+   （場景 + 花 + 2 個螞蟻 InstancedMesh）。OFF 模式在 1,000 隻就要 **213** 個 draw call。
    這是 Rule 1（`1 voxel != 1 Three.js Mesh`）在螞蟻上的直接體現。
 2. **OFF 模式的 C 列與 B 列完全相同**：因為安全上限 `MAX_NON_INSTANCED_ANTS = 1000`
    生效——刻意不讓頁面崩潰（PRD 要求）。`objects` 在 OFF 模式固定為 1,023，與螞蟻數無關。
 3. **ON 模式的三角形數較高是預期行為**：ON 會依 LOD 距離混合 detailed / simplified
    模型；OFF 模式一律使用 detailed 幾何，且被 1,000 上限截斷，所以三角形數反而不隨
    螞蟻數成長。
-4. **CPU 軟體渲染下 FPS 無參考價值**：C ON 的 FPS（約 14.6）純粹是 SwiftShader 的
-   CPU 光柵化成本，不能推論實機 GPU 表現。實機驗證見 issue #4 / #8。
+4. **C ON 的 7,392 隻可見**是 Distance Culling（`CULL_DISTANCE = 130`）的結果，
+   而非螞蟻沒生成：10,000 隻全在場景中，只是畫面外的沒送 GPU。
+5. **CPU 軟體渲染下 FPS 無參考價值**：純粹是 SwiftShader 的 CPU 光柵化成本，
+   不能推論實機 GPU 表現。實機驗證見 [`ON-DEVICE-MEASUREMENT.md`](ON-DEVICE-MEASUREMENT.md)
+   與 issue #4 / #8。
 
 `console errors: 0`。
 
@@ -134,6 +159,9 @@ draw call 來源（200 朵時 168 個 draw call，佔絕大多數）。相比之
 （使用相同種子與 rng 順序）。變體數上限 3 × 5 = 15，因此 draw call 與花朵數脫鉤。
 
 ### 結果
+
+> 以下數字為 Phase 4 **當下**的量測值；Phase 4 之後另有規模調整（House 放大、
+> 場景基準線微調），現況數字見上方 Phase 2 表格。
 
 - **draw call 不再隨花朵數成長**：200 朵花由 168 → **21**（8×）。
 - 場景基準線（50 朵花）由 47 → **19** draw call。
@@ -270,17 +298,18 @@ draw call 來源（200 朵時 168 個 draw call，佔絕大多數）。相比之
 
 **架構上可接受，效能驗證需在實機 GPU 補做。**
 
-| case | 螞蟻 | Draw calls | Triangles | visible | objects |
-|---|---:|---:|---:|---:|---:|
-| C ON | 10,000 | **21** | 386,030 | 7,437 | 1,023 |
+| case | 螞蟻 | Draw calls | Triangles | Vertices | visible | objects |
+|---|---:|---:|---:|---:|---:|---:|
+| C ON | 10,000 | **22** | 386,798 | 773,596 | 7,392 | 1,023 |
 
-- 與 Ant 數量無關的固定成本：21 draw call（場景 5 + 花 15 + 螞蟻 2 InstancedMesh）。
-- LOD + distance culling 已工作：`visible` = 7,437（扣掉距離剔除與安全上限）。
+- 與 Ant 數量無關的固定成本：22 draw call（場景 + 花 15 個變體 + 螞蟻 2 InstancedMesh）。
+- LOD + distance culling 已工作：`visible` = 7,392（扣掉距離剔除與安全上限）。
 - `objects` 在 OFF 模式被 1,000 上限截斷（PRD 強制安全上限，刻意不讓瀏覽器崩潰）。
-- `geometries` 在所有 Case 都是 22（**不會隨螞蟻數爆增**），這是 Rule 1
+- `geometries` 在所有 Case 都是 23（**不會隨螞蟻數爆增**），這是 Rule 1
   （`1 voxel != 1 Mesh`）的核心驗證。
 
-實機 FPS / Frame Time 待 issue #4 / #8。
+實機 FPS / Frame Time 待 issue #4 / #8，量測步驟見
+[`ON-DEVICE-MEASUREMENT.md`](ON-DEVICE-MEASUREMENT.md)。
 
 ### 4. GPU 是否為主要瓶頸？
 
@@ -293,9 +322,10 @@ draw call 來源（200 朵時 168 個 draw call，佔絕大多數）。相比之
 
 **SwiftShader 下是，但這是工具限制不是真的 CPU 瓶頸。** SwiftShader 把 fillrate 全
 丟回 CPU，所以 FPS 數字反映的是 CPU 光柵化成本。C ON 在 SwiftShader 下掉到 14.6 FPS，
-純粹是 38.6 萬三角形 × 7,437 instance 的 CPU 模擬繪製負擔，**不可推論實機 GPU 表現**。
+純粹是 38.6 萬三角形 × 7,392 instance 的 CPU 模擬繪製負擔，**不可推論實機 GPU 表現**。
 
-實機 CPU vs GPU 切分需 issue #4 / #8 補測。
+實機 CPU vs GPU 切分需 issue #4 / #8 補測，步驟見
+[`ON-DEVICE-MEASUREMENT.md`](ON-DEVICE-MEASUREMENT.md)。
 
 ### 6. Draw Call 是否為主要瓶頸？
 
@@ -327,9 +357,9 @@ draw call 來源（200 朵時 168 個 draw call，佔絕大多數）。相比之
 
 - **Rule 1（`1 voxel != 1 Mesh`）成立**：每個 `VoxelModel` 只產生 1 個
   `BufferGeometry`；所有 model 共用同一份材質（vertex color）。`geometries` 數
-  在 10,000 隻螞蟻時仍維持 22，沒有隨個體數爆增。
+  在 10,000 隻螞蟻時仍維持 23，沒有隨個體數爆增。
 - **大量物件路徑已被驗證**：Ant Instancing / LOD / Distance Culling + Flower InstancedMesh，
-  10,000 隻螞蟻只有 21 draw call。
+  10,000 隻螞蟻只有 22 draw call。
 - **跨物件靜態擺放**用排除區域（exclusion zone）解掉（#12），不需 Physics Engine，
   符合 PRD 限制。
 
@@ -400,6 +430,22 @@ Tree#2 樹冠 z 28.3~42.7）。
 - `03-house-facade.png` 判讀確認整棟 House 完整入鏡、屋頂未被裁切。
 - 重新量測 draw call / 三角形未回歸（baseline 20 draw call / 10,958 triangles）。
 
+## PRD §15 Benchmark 欄位對照
+
+PRD §15 要求「不得只回報 FPS」，至少記錄下列欄位。目前狀態：
+
+| PRD §15 要求欄位 | 來源 | 狀態 |
+|---|---|---|
+| FPS | `PerformanceMonitor` 自行計算 | ✅ |
+| Frame Time | `PerformanceMonitor` 自行計算 | ✅ |
+| Draw Calls | `renderer.info.render.calls` | ✅ |
+| Triangles | `renderer.info.render.triangles` | ✅ |
+| **Vertices** | `countVertices`（frustum-aware，見 Phase 2 段落） | ✅ 本輪補上 |
+| Visible Objects | `InstanceManager.visibleCount` | ✅ |
+| Memory | `performance.memory`（Chrome 專屬，需 `--enable-precise-memory-info`） | ✅（有量化限制，見欄位說明） |
+
+Case A / B / C × Instancing ON / OFF 的矩陣已完整產出於 `report.json`。
+
 ## 後續
 
 - 尺度比例：issue #7（**已完成**，House 放大為總高 31）
@@ -408,6 +454,8 @@ Tree#2 樹冠 z 28.3~42.7）。
 - Phase 3 Character A/B 對照（#5）：**已完成**，結論為保留細尺度角色
 - Phase 4 花卉 InstancedMesh 最佳化（#6）：**已完成**，200 朵花 draw call 168 → 21
 - Phase 5 Review（#9）：**已完成**，7 個問題的回答見上方
-- 實機 GPU 效能：issue #4 / #8（需在真實 GPU 上驗證，SwiftShader 的 FPS 無效）
+- PRD §15 Vertices 欄位：**已完成補上**（frustum-aware，並與三角形數交叉驗證）
+- **實機 GPU 效能：issue #4 / #8** — 唯一剩餘項目，需在真實 GPU 上驗證；
+  步驟見 [`ON-DEVICE-MEASUREMENT.md`](ON-DEVICE-MEASUREMENT.md)
 
 

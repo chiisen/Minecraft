@@ -2,6 +2,7 @@ import Stats from 'stats.js';
 import * as THREE from 'three';
 
 import type { DebugReadout } from './DebugPanel';
+import { countMeshes, countVertices } from './sceneStats';
 
 /** 每隔多少帧更新一次 renderer.info 讀數（避免每帧都做字串處理）。 */
 const SAMPLE_INTERVAL = 10;
@@ -14,13 +15,20 @@ export class PerformanceMonitor {
   private readonly stats: Stats;
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene: THREE.Scene;
+  private readonly camera: THREE.Camera;
   private readonly readout: DebugReadout;
   private lastTimestamp = performance.now();
   private frames = 0;
 
-  constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, readout: DebugReadout) {
+  constructor(
+    renderer: THREE.WebGLRenderer,
+    scene: THREE.Scene,
+    camera: THREE.Camera,
+    readout: DebugReadout,
+  ) {
     this.renderer = renderer;
     this.scene = scene;
+    this.camera = camera;
     this.readout = readout;
 
     this.stats = new Stats();
@@ -52,19 +60,9 @@ export class PerformanceMonitor {
     if (this.frames % SAMPLE_INTERVAL === 0) {
       const info = this.renderer.info;
       this.readout.triangles = info.render.triangles;
+      this.readout.vertices = countVertices(this.scene, this.camera);
       this.readout.drawCalls = info.render.calls;
-      this.readout.objects = this.countRenderableObjects();
+      this.readout.objects = countMeshes(this.scene);
     }
-  }
-
-  private countRenderableObjects(): number {
-    let objects = 0;
-    this.scene.traverse((object) => {
-      // InstancedMesh 繼承自 Mesh，這裡一併計入。
-      if (object instanceof THREE.Mesh) {
-        objects += 1;
-      }
-    });
-    return objects;
   }
 }

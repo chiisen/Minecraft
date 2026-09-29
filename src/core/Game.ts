@@ -4,19 +4,9 @@ import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockCont
 import { DebugPanel, type SettingKey } from '../debug/DebugPanel';
 import type { CameraView, DebugFlagKey, VoxelDebugApi } from '../debug/DevApi';
 import { PerformanceMonitor } from '../debug/PerformanceMonitor';
+import { countMeshes, countVertices } from '../debug/sceneStats';
 import { MAX_NON_INSTANCED_ANTS } from '../rendering/InstanceManager';
 import { DEFAULT_ANT_COUNT, DEFAULT_FLOWER_COUNT, World } from '../world/World';
-
-/** 場景中的 Mesh / InstancedMesh 總數（效能讀數用）。 */
-function countMeshes(scene: THREE.Scene): number {
-  let count = 0;
-  scene.traverse((object) => {
-    if (object instanceof THREE.Mesh) {
-      count += 1;
-    }
-  });
-  return count;
-}
 
 /** Chrome 專屬的 JS heap 用量；其他瀏覽器不支援時回傳 null。 */
 function readUsedHeapBytes(): number | null {
@@ -84,6 +74,7 @@ export class Game {
     this.performanceMonitor = new PerformanceMonitor(
       this.renderer,
       this.scene,
+      this.camera,
       this.debugPanel.readout,
     );
 
@@ -193,6 +184,7 @@ export class Game {
       getStats: () => ({
         drawCalls: this.renderer.info.render.calls,
         triangles: this.renderer.info.render.triangles,
+        vertices: countVertices(this.scene, this.camera),
         visibleAnts: this.world.ants.visibleCount,
         fps: this.debugPanel.readout.fps,
         frameTime: this.debugPanel.readout.frameTime,

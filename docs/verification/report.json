@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-29T05:15:44.672Z",
+  "capturedAt": "2026-09-29T05:44:33.461Z",
   "renderer": "headless Chromium / SwiftShader（CPU 軟體渲染，FPS 無參考價值）",
   "viewport": {
     "width": 1600,
@@ -15,7 +15,7 @@
         150,
         108
       ],
-      "colorBuckets": 200
+      "colorBuckets": 201
     },
     {
       "file": "02-scale-lineup.png",
@@ -25,7 +25,7 @@
         159,
         128
       ],
-      "colorBuckets": 79
+      "colorBuckets": 76
     },
     {
       "file": "03-house-facade.png",
@@ -35,27 +35,27 @@
         141,
         125
       ],
-      "colorBuckets": 66
+      "colorBuckets": 65
     },
     {
       "file": "04-character-full.png",
       "note": "Character 全身，檢查身體比例",
       "mean": [
         104,
-        129,
+        128,
         101
       ],
-      "colorBuckets": 111
+      "colorBuckets": 113
     },
     {
       "file": "05-character-face.png",
       "note": "Character 頭部特寫，檢查眼睛 / 眉毛 / 鼻 / 嘴 / 髮型",
       "mean": [
+        101,
         102,
-        103,
-        84
+        83
       ],
-      "colorBuckets": 111
+      "colorBuckets": 114
     },
     {
       "file": "06-tree.png",
@@ -63,39 +63,39 @@
       "mean": [
         102,
         147,
-        106
+        105
       ],
-      "colorBuckets": 131
+      "colorBuckets": 130
     },
     {
       "file": "07-flowers-ground.png",
       "note": "花卉群（200 朵）：相機在花圈外，避免貼在花上",
       "mean": [
         109,
-        140,
+        139,
         110
       ],
-      "colorBuckets": 301
+      "colorBuckets": 304
     },
     {
       "file": "08-ant-field.png",
       "note": "螞蟻群落（10,000 隻）：活動半徑 140。關閉距離剔除才看得到完整分佈，否則只會拍到相機附近的一小塊",
       "mean": [
         98,
-        138,
+        137,
         69
       ],
-      "colorBuckets": 156
+      "colorBuckets": 157
     },
     {
       "file": "09-ant-closeup.png",
       "note": "螞蟻近距離（1,000 隻）：鏡頭對準編號 #7 的個體（位置 x=8.16 z=48.50，朝向約 75.7°），採 3/4 前側視角，才看得到頭部觸角與三節身體",
       "mean": [
         102,
-        119,
+        118,
         92
       ],
-      "colorBuckets": 98
+      "colorBuckets": 99
     },
     {
       "file": "10-character-compare.png",
@@ -105,7 +105,7 @@
         109,
         86
       ],
-      "colorBuckets": 114
+      "colorBuckets": 111
     }
   ],
   "instancingComparison": [
@@ -116,9 +116,10 @@
       "case": null,
       "drawCalls": 20,
       "triangles": 10958,
+      "vertices": 21916,
       "visibleAnts": 0,
-      "fps": 60.35259841021515,
-      "frameTime": 16.569294882765846,
+      "fps": 60.07119717975106,
+      "frameTime": 16.64691311224745,
       "objects": 23,
       "geometries": 23,
       "textures": 0,
@@ -131,9 +132,10 @@
       "case": "A",
       "drawCalls": 22,
       "triangles": 14306,
+      "vertices": 28612,
       "visibleAnts": 65,
-      "fps": 60.1782021427043,
-      "frameTime": 16.617312654649236,
+      "fps": 59.777682759702856,
+      "frameTime": 16.728651125869952,
       "objects": 23,
       "geometries": 23,
       "textures": 0,
@@ -146,9 +148,10 @@
       "case": "A",
       "drawCalls": 37,
       "triangles": 14018,
+      "vertices": 28036,
       "visibleAnts": 65,
-      "fps": 59.52153833739196,
-      "frameTime": 16.80064104411413,
+      "fps": 59.67145437374727,
+      "frameTime": 16.758431824647374,
       "objects": 1023,
       "geometries": 23,
       "textures": 0,
@@ -161,9 +164,10 @@
       "case": "B",
       "drawCalls": 22,
       "triangles": 47822,
+      "vertices": 95644,
       "visibleAnts": 740,
-      "fps": 41.4841823479151,
-      "frameTime": 24.10557333909361,
+      "fps": 41.97786734961436,
+      "frameTime": 23.822077278758822,
       "objects": 1023,
       "geometries": 23,
       "textures": 0,
@@ -176,9 +180,10 @@
       "case": "B",
       "drawCalls": 213,
       "triangles": 45698,
+      "vertices": 91396,
       "visibleAnts": 740,
-      "fps": 42.443532087711304,
-      "frameTime": 23.560715869109547,
+      "fps": 42.40365488960945,
+      "frameTime": 23.582872811396243,
       "objects": 1023,
       "geometries": 23,
       "textures": 0,
@@ -191,9 +196,10 @@
       "case": "C",
       "drawCalls": 22,
       "triangles": 386798,
+      "vertices": 773596,
       "visibleAnts": 7392,
-      "fps": 14.542061861118624,
-      "frameTime": 68.76603947571687,
+      "fps": 14.673660677818896,
+      "frameTime": 68.14932019735383,
       "objects": 1023,
       "geometries": 23,
       "textures": 0,
@@ -206,9 +212,10 @@
       "case": "C",
       "drawCalls": 213,
       "triangles": 45698,
+      "vertices": 91396,
       "visibleAnts": 740,
-      "fps": 33.244936436954404,
-      "frameTime": 30.079768746028343,
+      "fps": 34.154140188419795,
+      "frameTime": 29.27902721260883,
       "objects": 1023,
       "geometries": 23,
       "textures": 0,
