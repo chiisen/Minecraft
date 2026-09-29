@@ -8,6 +8,7 @@
 - [#4](https://github.com/chiisen/Minecraft/issues/4) Phase 2 效能 Benchmark（Case A/B/C）
 - [#5](https://github.com/chiisen/Minecraft/issues/5) Phase 3 Character 粗 / 細對照實驗
 - [#6](https://github.com/chiisen/Minecraft/issues/6) Phase 4 依 Benchmark 決定最佳化項目
+- [#9](https://github.com/chiisen/Minecraft/issues/9) Phase 5 Review（回答 PRD 7 個問題）
 
 ## 怎麼跑
 
@@ -233,6 +234,114 @@ draw call 來源（200 朵時 168 個 draw call，佔絕大多數）。相比之
    - 兩側頭髮由整片（深 5.4）改為往後收（深 2.6，中心 z = −1.4），露出臉頰側。
    - 視覺複驗確認耳朵可見（正面 3/4 視角下，角色左耳明確突出於頭髮之外）。
 
+## Phase 5 Review：回答 PRD 的 7 個問題（issue #9）
+
+對應 PRD §20 Phase 5。本節為整個 demo 的總結性 review，
+每一題都附上量測或截圖作為證據。
+
+---
+
+### 1. Multi-Scale Voxel 視覺是否成立？
+
+**部分成立**，但有一個 PRD §7 強制要求目前未通過。
+
+成立的部分（10 張截圖皆通過視覺複驗）：
+
+- 四種尺度（House / Character / Flower / Ant）的**模型可讀性**都成立——螞蟻近看可辨識
+  為螞蟻（#14）、花卉完整且貼地、花瓣十字完整（Phase 4）、房屋細節清楚。
+- 各物件的**渲染語言一致**（同一材質、vertex color），整體視覺不衝突。
+
+**未通過的部分**：PRD §7 明確要求視覺順序 `House > Human > Flower > Ant`。
+目前實測 Character 高 21.5、House 高 21（門高僅 8），Human **≥** House，且角色
+進不去門。轉往 issue #7 決策。
+
+### 2. Character 是否明顯比傳統方塊人物自然？
+
+**是。** Phase 3 A/B 對照（`10-character-compare.png`）並排判讀：
+
+- 粗方塊（6 個大立方體，無五官）→ 一塊顏色，沒有「角色」的感覺。
+- 細尺度（27 primitives，27 個方塊組成）→ 有黑髮、眼睛、眉毛、鼻子、嘴巴、耳朵、鞋子。
+  視覺判讀明確說「右邊明顯更自然」。
+
+細尺度角色**保留為主角**；粗方塊角色保留為 Debug UI 對照選項，**不採用為主角**。
+細節與決策見 issue #5。
+
+### 3. 10,000 個微型生物是否可接受？
+
+**架構上可接受，效能驗證需在實機 GPU 補做。**
+
+| case | 螞蟻 | Draw calls | Triangles | visible | objects |
+|---|---:|---:|---:|---:|---:|
+| C ON | 10,000 | **21** | 386,030 | 7,437 | 1,023 |
+
+- 與 Ant 數量無關的固定成本：21 draw call（場景 5 + 花 15 + 螞蟻 2 InstancedMesh）。
+- LOD + distance culling 已工作：`visible` = 7,437（扣掉距離剔除與安全上限）。
+- `objects` 在 OFF 模式被 1,000 上限截斷（PRD 強制安全上限，刻意不讓瀏覽器崩潰）。
+- `geometries` 在所有 Case 都是 22（**不會隨螞蟻數爆增**），這是 Rule 1
+  （`1 voxel != 1 Mesh`）的核心驗證。
+
+實機 FPS / Frame Time 待 issue #4 / #8。
+
+### 4. GPU 是否為主要瓶頸？
+
+**無法在本環境回答。** SwiftShader 是 CPU 軟體渲染，無法區分 GPU vs CPU 瓶頸。
+`renderer.info` 提供的 draw call / triangle / geometry 數與 GPU 後端無關，可以單獨評估。
+
+需要你在實機 GPU 上跑一次 Phase 2 表格，才能回答。
+
+### 5. CPU 是否為主要瓶頸？
+
+**SwiftShader 下是，但這是工具限制不是真的 CPU 瓶頸。** SwiftShader 把 fillrate 全
+丟回 CPU，所以 FPS 數字反映的是 CPU 光柵化成本。C ON 在 SwiftShader 下掉到 14.6 FPS，
+純粹是 38.6 萬三角形 × 7,437 instance 的 CPU 模擬繪製負擔，**不可推論實機 GPU 表現**。
+
+實機 CPU vs GPU 切分需 issue #4 / #8 補測。
+
+### 6. Draw Call 是否為主要瓶頸？
+
+**Phase 4 之前是花卉、之後已不是（以本環境能驗證的範圍為準）。**
+
+量測事實：
+
+| 對象 | 數量 | Phase 4 前 draw call | Phase 4 後 |
+|---|---:|---:|---:|
+| Flower | 50 | 47 | **19** |
+| Flower | 200 | 168 | **21** |
+| Ant（Instancing ON） | 10,000 | 49 | **21** |
+| Ant（Instancing OFF） | 1,000 | 244 | 216 |
+
+- **花卉**改用 InstancedMesh（按「花莖高度 × 花瓣顏色」分變體）後，draw call 與
+  花朵數脫鉤；200 朵時由 168 → 21（8×）。
+- **螞蟻**Instancing 早已就緒：10,000 隻只有 2 個 draw call。
+- OFF 模式 1,000 隻就要 216 draw call，且 C OFF 被 `MAX_NON_INSTANCED_ANTS = 1000`
+  截斷——這是 PRD 強制安全上限，刻意不讓瀏覽器崩潰。
+
+依 Rule 6，Hidden Face Removal、跨模型 Geometry Merge、LOD 擴充至 Character/House
+**暫不實作**（非量測到的瓶頸）。
+
+### 7. 是否值得進入真正遊戲 Prototype？
+
+**值得，但有兩個前置需先處理。**
+
+值得的理由（架構已被驗證）：
+
+- **Rule 1（`1 voxel != 1 Mesh`）成立**：每個 `VoxelModel` 只產生 1 個
+  `BufferGeometry`；所有 model 共用同一份材質（vertex color）。`geometries` 數
+  在 10,000 隻螞蟻時仍維持 22，沒有隨個體數爆增。
+- **大量物件路徑已被驗證**：Ant Instancing / LOD / Distance Culling + Flower InstancedMesh，
+  10,000 隻螞蟻只有 21 draw call。
+- **跨物件靜態擺放**用排除區域（exclusion zone）解掉（#12），不需 Physics Engine，
+  符合 PRD 限制。
+
+前置：
+
+1. **尺度決策（issue #7）**：目前唯一未通過的驗收項（Human ≥ House），進遊戲前需定。
+2. **實機 GPU 效能（issue #8）**：本 demo 在 SwiftShader 下無法評估真實效能，
+   陰影 + 10,000 隻 InstancedMesh 的實機數字需補。
+
+總結：**通過但有限制地通過**。架構與「量測後再最佳化」的工程紀律都建立好了，
+剩下的工作是補齊實機數據與一個尺度決策。
+
 ## 後續
 
 - 尺度比例：issue #7（**需決策**，目前唯一未通過的檢查項）
@@ -240,4 +349,7 @@ draw call 來源（200 朵時 168 個 draw call，佔絕大多數）。相比之
 - Phase 2 效能 Benchmark（#4）：**已完成（SwiftShader）**，實機 GPU 數字待補
 - Phase 3 Character A/B 對照（#5）：**已完成**，結論為保留細尺度角色
 - Phase 4 花卉 InstancedMesh 最佳化（#6）：**已完成**，200 朵花 draw call 168 → 21
+- Phase 5 Review（#9）：**已完成**，7 個問題的回答見上方
 - 實機 GPU 效能：issue #4 / #8（需在真實 GPU 上驗證，SwiftShader 的 FPS 無效）
+
+
