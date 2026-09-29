@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-29T04:04:01.253Z",
+  "capturedAt": "2026-09-29T04:21:22.934Z",
   "renderer": "headless Chromium / SwiftShader（CPU 軟體渲染，FPS 無參考價值）",
   "viewport": {
     "width": 1600,
@@ -15,7 +15,7 @@
         151,
         109
       ],
-      "colorBuckets": 215
+      "colorBuckets": 213
     },
     {
       "file": "02-scale-lineup.png",
@@ -35,7 +35,7 @@
         145,
         120
       ],
-      "colorBuckets": 87
+      "colorBuckets": 85
     },
     {
       "file": "04-character-full.png",
@@ -45,7 +45,7 @@
         135,
         110
       ],
-      "colorBuckets": 132
+      "colorBuckets": 129
     },
     {
       "file": "05-character-face.png",
@@ -55,7 +55,7 @@
         105,
         86
       ],
-      "colorBuckets": 123
+      "colorBuckets": 122
     },
     {
       "file": "06-tree.png",
@@ -65,7 +65,7 @@
         149,
         108
       ],
-      "colorBuckets": 128
+      "colorBuckets": 134
     },
     {
       "file": "07-flowers-ground.png",
@@ -75,7 +75,7 @@
         143,
         116
       ],
-      "colorBuckets": 275
+      "colorBuckets": 278
     },
     {
       "file": "08-ant-field.png",
@@ -85,7 +85,7 @@
         138,
         69
       ],
-      "colorBuckets": 148
+      "colorBuckets": 145
     },
     {
       "file": "09-ant-closeup.png",
@@ -105,7 +105,7 @@
         119,
         98
       ],
-      "colorBuckets": 112
+      "colorBuckets": 114
     }
   ],
   "instancingComparison": [
@@ -114,13 +114,13 @@
       "instancing": true,
       "label": "baseline",
       "case": null,
-      "drawCalls": 47,
-      "triangles": 10202,
+      "drawCalls": 19,
+      "triangles": 10874,
       "visibleAnts": 0,
-      "fps": 60.41662193739448,
-      "frameTime": 16.551736391952367,
-      "objects": 59,
-      "geometries": 50,
+      "fps": 60.31429512701732,
+      "frameTime": 16.579817403056374,
+      "objects": 23,
+      "geometries": 22,
       "textures": 0,
       "usedHeapBytes": 10000000
     },
@@ -129,13 +129,13 @@
       "instancing": true,
       "label": "A ON",
       "case": "A",
-      "drawCalls": 49,
-      "triangles": 13730,
+      "drawCalls": 21,
+      "triangles": 14402,
       "visibleAnts": 70,
-      "fps": 60.51819062946159,
-      "frameTime": 16.523957335782903,
-      "objects": 59,
-      "geometries": 50,
+      "fps": 59.64745583468632,
+      "frameTime": 16.76517440696067,
+      "objects": 23,
+      "geometries": 22,
       "textures": 0,
       "usedHeapBytes": 10000000
     },
@@ -144,13 +144,13 @@
       "instancing": false,
       "label": "A OFF",
       "case": "A",
-      "drawCalls": 69,
-      "triangles": 14162,
+      "drawCalls": 41,
+      "triangles": 14834,
       "visibleAnts": 70,
-      "fps": 60.23825273485348,
-      "frameTime": 16.600747110007163,
-      "objects": 1059,
-      "geometries": 50,
+      "fps": 60.34899055024796,
+      "frameTime": 16.57028544938754,
+      "objects": 1023,
+      "geometries": 22,
       "textures": 0,
       "usedHeapBytes": 10000000
     },
@@ -159,13 +159,13 @@
       "instancing": true,
       "label": "B ON",
       "case": "B",
-      "drawCalls": 49,
-      "triangles": 48146,
+      "drawCalls": 21,
+      "triangles": 48818,
       "visibleAnts": 750,
-      "fps": 39.74945731502658,
-      "frameTime": 25.157576167007633,
-      "objects": 1059,
-      "geometries": 50,
+      "fps": 41.491575824306,
+      "frameTime": 24.10127791324316,
+      "objects": 1023,
+      "geometries": 22,
       "textures": 0,
       "usedHeapBytes": 10000000
     },
@@ -174,13 +174,13 @@
       "instancing": false,
       "label": "B OFF",
       "case": "B",
-      "drawCalls": 244,
-      "triangles": 45662,
+      "drawCalls": 216,
+      "triangles": 46334,
       "visibleAnts": 750,
-      "fps": 42.2985818490488,
-      "frameTime": 23.64145454258268,
-      "objects": 1059,
-      "geometries": 50,
+      "fps": 41.469562147565256,
+      "frameTime": 24.114071820715175,
+      "objects": 1023,
+      "geometries": 22,
       "textures": 0,
       "usedHeapBytes": 10000000
     },
@@ -189,13 +189,13 @@
       "instancing": true,
       "label": "C ON",
       "case": "C",
-      "drawCalls": 49,
-      "triangles": 385358,
+      "drawCalls": 21,
+      "triangles": 386030,
       "visibleAnts": 7437,
-      "fps": 14.83204103016635,
-      "frameTime": 67.421604212538,
-      "objects": 1059,
-      "geometries": 50,
+      "fps": 14.482895316104981,
+      "frameTime": 69.04696734830361,
+      "objects": 1023,
+      "geometries": 22,
       "textures": 0,
       "usedHeapBytes": 10000000
     },
@@ -204,13 +204,13 @@
       "instancing": false,
       "label": "C OFF",
       "case": "C",
-      "drawCalls": 244,
-      "triangles": 45662,
+      "drawCalls": 216,
+      "triangles": 46334,
       "visibleAnts": 750,
-      "fps": 34.06572937458694,
-      "frameTime": 29.35501509461297,
-      "objects": 1059,
-      "geometries": 50,
+      "fps": 32.04144381054452,
+      "frameTime": 31.209579877636784,
+      "objects": 1023,
+      "geometries": 22,
       "textures": 0,
       "usedHeapBytes": 10000000
     }

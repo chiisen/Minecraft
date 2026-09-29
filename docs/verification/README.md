@@ -7,6 +7,7 @@
 - [#3](https://github.com/chiisen/Minecraft/issues/3) Phase 1 視覺驗證（截圖）
 - [#4](https://github.com/chiisen/Minecraft/issues/4) Phase 2 效能 Benchmark（Case A/B/C）
 - [#5](https://github.com/chiisen/Minecraft/issues/5) Phase 3 Character 粗 / 細對照實驗
+- [#6](https://github.com/chiisen/Minecraft/issues/6) Phase 4 依 Benchmark 決定最佳化項目
 
 ## 怎麼跑
 
@@ -83,22 +84,21 @@ Instancing ON / OFF。欄位定義：
 
 | case | 螞蟻數 | Instancing | Draw calls | Triangles | visible | objects | geometries | heapMB |
 |---|---:|---|---:|---:|---:|---:|---:|---:|
-| baseline | 0 | ON | 47 | 10,202 | 0 | 59 | 50 | 9.5 |
-| A ON | 100 | ON | 49 | 13,730 | 70 | 59 | 50 | 9.5 |
-| A OFF | 100 | OFF | 69 | 14,162 | 70 | 1,059 | 50 | 9.5 |
-| B ON | 1,000 | ON | 49 | 48,146 | 750 | 1,059 | 50 | 9.5 |
-| B OFF | 1,000 | OFF | 244 | 45,662 | 750 | 1,059 | 50 | 9.5 |
-| C ON | 10,000 | ON | **49** | 385,358 | 7,437 | 1,059 | 50 | 9.5 |
-| C OFF | 10,000 | OFF | 244 | 45,662 | 750 | 1,059 | 50 | 9.5 |
+| baseline | 0 | ON | 19 | 10,874 | 0 | 23 | 22 | 9.5 |
+| A ON | 100 | ON | 21 | 14,402 | 70 | 23 | 22 | 9.5 |
+| A OFF | 100 | OFF | 41 | 14,834 | 70 | 1,023 | 22 | 9.5 |
+| B ON | 1,000 | ON | 21 | 48,818 | 750 | 1,023 | 22 | 9.5 |
+| B OFF | 1,000 | OFF | 216 | 46,334 | 750 | 1,023 | 22 | 9.5 |
+| C ON | 10,000 | ON | **21** | 386,030 | 7,437 | 1,023 | 22 | 9.5 |
+| C OFF | 10,000 | OFF | 216 | 46,334 | 750 | 1,023 | 22 | 9.5 |
 
 ### 結論
 
-1. **Instancing 讓 draw call 與螞蟻數量脫鉤**：10,000 隻仍然是 **49** 個 draw call
-   （場景 + 2 個 InstancedMesh）。OFF 模式在 1,000 隻就要 **244** 個 draw call。
+1. **Instancing 讓 draw call 與螞蟻數量脫鉤**：10,000 隻仍然是 **21** 個 draw call
+   （場景 + 花 + 2 個螞蟻 InstancedMesh）。OFF 模式在 1,000 隻就要 **216** 個 draw call。
    這是 Rule 1（`1 voxel != 1 Three.js Mesh`）在螞蟻上的直接體現。
 2. **OFF 模式的 C 列與 B 列完全相同**：因為安全上限 `MAX_NON_INSTANCED_ANTS = 1000`
-   生效——刻意不讓頁面崩潰（PRD 要求）。`objects` 在 OFF 模式固定為 1,059
-   （場景 57 + 2 個空 InstancedMesh + 1,000 個 fallback mesh），與螞蟻數無關。
+   生效——刻意不讓頁面崩潰（PRD 要求）。`objects` 在 OFF 模式固定為 1,023，與螞蟻數無關。
 3. **ON 模式的三角形數較高是預期行為**：ON 會依 LOD 距離混合 detailed / simplified
    模型；OFF 模式一律使用 detailed 幾何，且被 1,000 上限截斷，所以三角形數反而不隨
    螞蟻數成長。
@@ -106,6 +106,46 @@ Instancing ON / OFF。欄位定義：
    CPU 光柵化成本，不能推論實機 GPU 表現。實機驗證見 issue #4 / #8。
 
 `console errors: 0`。
+
+## Phase 4 最佳化：花卉改用 InstancedMesh（issue #6）
+
+PRD §20 要求 Phase 4 **只解決實際量測到的瓶頸**（§19 Rule 6：不為未來犧牲目前簡潔度）。
+
+### 量測到的瓶頸
+
+把 `flowerCount` 逐一調整並量測 draw call（螞蟻 0、相機固定在 `[0,20,40]`）：
+
+| 花朵數 | 最佳化前 draw calls | 最佳化後 |
+|---:|---:|---:|
+| 0 | 6 | 6 |
+| 50 | 47 | **19** |
+| 100 | 86 | **21** |
+| 200 | 168 | **21** |
+
+最佳化前，**draw call 與花朵數 1:1 成長**（每朵花一個獨立 Mesh），是場景中最大的
+draw call 來源（200 朵時 168 個 draw call，佔絕大多數）。相比之下，螞蟻在 10,000 隻時
+也只有 2 個 draw call。
+
+### 做法（PRD §11.3）
+
+新增 `src/rendering/FlowerField.ts`：依「花莖高度 × 花瓣顏色」把花分成**變體**，
+每個變體一個 `InstancedMesh`。花朵外觀（位置、旋轉、顏色）與最佳化前**完全相同**
+（使用相同種子與 rng 順序）。變體數上限 3 × 5 = 15，因此 draw call 與花朵數脫鉤。
+
+### 結果
+
+- **draw call 不再隨花朵數成長**：200 朵花由 168 → **21**（8×）。
+- 場景基準線（50 朵花）由 47 → **19** draw call。
+- `objects` 由 59 → **23**、`geometries` 由 50 → **22**（不再每朵花一個 Mesh / Geometry）。
+- 200 朵花的三角形數由 20,366 → 23,558（+16%）。這是因為 InstancedMesh 以整體
+  bounding sphere 做視錐剔除，無法逐朵剔除；但 +3K 三角形可忽略，換得 8× 的 draw call 下降。
+
+### 刻意**不做**的最佳化
+
+- **Hidden Face Removal（§11.1）**：三角形數在 10,000 隻螞蟻時也只有 38.6 萬，
+  並非量測到的瓶頸，依 Rule 6 暫不實作。
+- **花 / 螞蟻的逐朵距離剔除**：InstancedMesh 不支援逐實例剔除；花朵上限 200、
+  成本極低，故改為只對螞蟻套用距離剔除。
 
 ## Phase 3 Character 粗 / 細對照（`10-character-compare.png`）
 
@@ -199,4 +239,5 @@ Instancing ON / OFF。欄位定義：
 - 擺放穿模（#12）、Tree 樹冠（#13）、Ant 辨識度（#14）、Character 耳朵：**已修正並複驗**
 - Phase 2 效能 Benchmark（#4）：**已完成（SwiftShader）**，實機 GPU 數字待補
 - Phase 3 Character A/B 對照（#5）：**已完成**，結論為保留細尺度角色
+- Phase 4 花卉 InstancedMesh 最佳化（#6）：**已完成**，200 朵花 draw call 168 → 21
 - 實機 GPU 效能：issue #4 / #8（需在真實 GPU 上驗證，SwiftShader 的 FPS 無效）

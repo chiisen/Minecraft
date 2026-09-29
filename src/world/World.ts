@@ -2,9 +2,9 @@ import * as THREE from 'three';
 
 import { createAntLodModel, createAntModel } from '../objects/Ant';
 import { createCharacterModel, createCoarseCharacterModel } from '../objects/Character';
-import { createFlowerModel } from '../objects/Flower';
 import { createHouseModel } from '../objects/House';
 import { createTreeModel } from '../objects/Tree';
+import { FlowerField } from '../rendering/FlowerField';
 import { InstanceManager, type AntTransform } from '../rendering/InstanceManager';
 import { buildVoxelGeometry, buildVoxelMesh, createVoxelMaterial } from '../voxel/MeshBuilder';
 import type { VoxelModel } from '../voxel/Primitive';
@@ -15,7 +15,6 @@ import {
   COARSE_CHARACTER_POSITION,
   HOUSE_POSITION,
   sampleOpenDisk,
-  sampleOpenRing,
   treePositions,
 } from './placement';
 
@@ -32,8 +31,7 @@ const ANT_FIELD_RADIUS = 140;
 const CULL_DISTANCE = 130;
 const LOD_DISTANCE = 40;
 
-/** 花 / 螞蟻與建築之間的額外淨空，避免貼著牆面生長。 */
-const FLOWER_CLEARANCE = 2.5;
+/** 螞蟻與建築之間的額外淨空，避免貼著牆面生長。 */
 const ANT_CLEARANCE = 0.6;
 
 /**
@@ -46,17 +44,15 @@ export class World {
   readonly ants: InstanceManager;
 
   private readonly scene: THREE.Scene;
-  private readonly flowerGroup = new THREE.Group();
-  private flowerMeshes: THREE.Mesh[] = [];
+  private readonly flowers: FlowerField;
   private readonly coarseCharacter: THREE.Mesh;
-  private distanceCulling = true;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
     this.material = createVoxelMaterial();
 
     scene.add(createGround());
-    scene.add(this.flowerGroup);
+    this.flowers = new FlowerField(scene, this.material);
 
     // 靜態物件
     this.addModel(scene, createHouseModel(), HOUSE_POSITION.x, HOUSE_POSITION.z, 0.4);
@@ -111,31 +107,12 @@ export class World {
   }
 
   setFlowerCount(count: number): void {
-    const target = Math.max(0, Math.round(count));
-    if (target === this.flowerMeshes.length) {
-      return;
-    }
-
-    for (const mesh of this.flowerMeshes) {
-      this.flowerGroup.remove(mesh);
-      mesh.geometry.dispose();
-    }
-    this.flowerMeshes = [];
-
-    const rng = createRng(9001);
-    for (let i = 0; i < target; i += 1) {
-      const { x, z } = sampleOpenRing(rng, 8, 50, FLOWER_CLEARANCE);
-      const mesh = buildVoxelMesh(createFlowerModel(5000 + i), this.material);
-      mesh.position.set(x, 0, z);
-      mesh.rotation.y = range(rng, 0, Math.PI * 2);
-      mesh.name = `Flower_${i}`;
-      this.flowerGroup.add(mesh);
-      this.flowerMeshes.push(mesh);
-    }
+    this.flowers.setCount(count);
   }
 
   setDistanceCulling(enabled: boolean): void {
-    this.distanceCulling = enabled;
+    // 花已改為 InstancedMesh（每個變體一個 draw call），無法逐朵距離剔除；
+    // 花朵總數上限 200、三角形成本極低，因此只對螞蟻套用距離剔除。
     this.ants.setDistanceCulling(enabled);
   }
 
@@ -147,7 +124,6 @@ export class World {
   /** 每帧呼叫。 */
   update(cameraPosition: THREE.Vector3): void {
     this.ants.update(cameraPosition);
-    this.updateFlowerVisibility(cameraPosition);
   }
 
   setShadowsEnabled(enabled: boolean): void {
@@ -157,14 +133,6 @@ export class World {
         object.receiveShadow = enabled;
       }
     });
-  }
-
-  private updateFlowerVisibility(cameraPosition: THREE.Vector3): void {
-    const limit = CULL_DISTANCE * CULL_DISTANCE;
-    for (const mesh of this.flowerMeshes) {
-      mesh.visible =
-        !this.distanceCulling || mesh.position.distanceToSquared(cameraPosition) <= limit;
-    }
   }
 
   private addModel(

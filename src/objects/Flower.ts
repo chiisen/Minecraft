@@ -9,7 +9,14 @@ import { createRng, pick, range } from '../voxel/random';
 const STEM = 0x2e8b57;
 const PETAL_COLORS = [0xff6b81, 0xffd166, 0xf368e0, 0xffffff, 0xff9f43] as const;
 
-export function createFlowerModel(seed: number): VoxelModel {
+/** 一朵花的「變體」：外觀相同的花可共用同一份幾何與 InstancedMesh。 */
+export interface FlowerVariant {
+  /** 外觀鍵；只要外觀不同就必須有不同的鍵。 */
+  readonly key: string;
+  readonly model: VoxelModel;
+}
+
+export function createFlowerVariant(seed: number): FlowerVariant {
   const rng = createRng(seed);
   const stemHeight = Math.round(range(rng, 3, 5));
   const top = stemHeight;
@@ -31,5 +38,9 @@ export function createFlowerModel(seed: number): VoxelModel {
     box(-1, top + 0.5, 0, 1, 1, 1, petal),
   );
 
-  return { primitives };
+  return { key: `${stemHeight}:${petal}`, model: { primitives } };
+}
+
+export function createFlowerModel(seed: number): VoxelModel {
+  return createFlowerVariant(seed).model;
 }
