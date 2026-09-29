@@ -4,6 +4,7 @@ import GUI from 'lil-gui';
 export interface DebugSettings {
   antCount: number;
   flowerCount: number;
+  coarseCharacter: boolean;
   instancing: boolean;
   lod: boolean;
   distanceCulling: boolean;
@@ -72,6 +73,11 @@ export class DebugPanel {
       .add(this.settings, 'flowerCount', 0, 200, 1)
       .name('Flower Count')
       .onChange(() => onChange('flowerCount'));
+
+    folder
+      .add(this.settings, 'coarseCharacter')
+      .name('Coarse Character (A/B)')
+      .onChange(() => onChange('coarseCharacter'));
 
     const presets = {
       ants100: () => this.applyAntPreset(100, onChange),

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 import { createAntLodModel, createAntModel } from '../objects/Ant';
-import { createCharacterModel } from '../objects/Character';
+import { createCharacterModel, createCoarseCharacterModel } from '../objects/Character';
 import { createFlowerModel } from '../objects/Flower';
 import { createHouseModel } from '../objects/House';
 import { createTreeModel } from '../objects/Tree';
@@ -12,6 +12,7 @@ import { createRng, range } from '../voxel/random';
 import { createGround } from './Ground';
 import {
   CHARACTER_POSITION,
+  COARSE_CHARACTER_POSITION,
   HOUSE_POSITION,
   sampleOpenDisk,
   sampleOpenRing,
@@ -47,6 +48,7 @@ export class World {
   private readonly scene: THREE.Scene;
   private readonly flowerGroup = new THREE.Group();
   private flowerMeshes: THREE.Mesh[] = [];
+  private readonly coarseCharacter: THREE.Mesh;
   private distanceCulling = true;
 
   constructor(scene: THREE.Scene) {
@@ -65,6 +67,16 @@ export class World {
       CHARACTER_POSITION.z,
       -0.5,
     );
+
+    // Phase 3 A/B 對照組：預設隱藏，由 Debug UI / 除錯 API 切換。
+    this.coarseCharacter = this.addModel(
+      scene,
+      createCoarseCharacterModel(),
+      COARSE_CHARACTER_POSITION.x,
+      COARSE_CHARACTER_POSITION.z,
+      -0.5,
+    );
+    this.coarseCharacter.visible = false;
 
     const treeRng = createRng(31337);
     for (const [index, position] of treePositions().entries()) {
@@ -125,6 +137,11 @@ export class World {
   setDistanceCulling(enabled: boolean): void {
     this.distanceCulling = enabled;
     this.ants.setDistanceCulling(enabled);
+  }
+
+  /** Phase 3：切換 Minecraft-like 粗方塊對照角色。 */
+  setCoarseCharacterVisible(visible: boolean): void {
+    this.coarseCharacter.visible = visible;
   }
 
   /** 每帧呼叫。 */

@@ -18,6 +18,12 @@ export interface GroundZone {
 
 export const HOUSE_POSITION = { x: -22, z: -12 } as const;
 export const CHARACTER_POSITION = { x: 10, z: 6 } as const;
+/**
+ * Phase 3 A/B 對照用的 Minecraft-like 粗方塊角色，站在細尺度角色左側。
+ * 預設隱藏（Debug UI 的 Coarse Character 開關），但位置固定，
+ * 因此排除區域照樣保留，讓花 / 螞蟻的分佈不因開關而變動。
+ */
+export const COARSE_CHARACTER_POSITION = { x: 1, z: 6 } as const;
 
 export const TREE_COUNT = 3;
 /**
@@ -43,6 +49,7 @@ export function treePositions(): readonly { readonly x: number; readonly z: numb
 export const GROUND_ZONES: readonly GroundZone[] = [
   { x: HOUSE_POSITION.x, z: HOUSE_POSITION.z, halfX: 13.5, halfZ: 12.5 },
   { x: CHARACTER_POSITION.x, z: CHARACTER_POSITION.z, halfX: 4.5, halfZ: 4.5 },
+  { x: COARSE_CHARACTER_POSITION.x, z: COARSE_CHARACTER_POSITION.z, halfX: 4.5, halfZ: 4.5 },
   ...treePositions().map((position) => ({
     x: position.x,
     z: position.z,

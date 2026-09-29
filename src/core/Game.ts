@@ -7,6 +7,23 @@ import { PerformanceMonitor } from '../debug/PerformanceMonitor';
 import { MAX_NON_INSTANCED_ANTS } from '../rendering/InstanceManager';
 import { DEFAULT_ANT_COUNT, DEFAULT_FLOWER_COUNT, World } from '../world/World';
 
+/** 場景中的 Mesh / InstancedMesh 總數（效能讀數用）。 */
+function countMeshes(scene: THREE.Scene): number {
+  let count = 0;
+  scene.traverse((object) => {
+    if (object instanceof THREE.Mesh) {
+      count += 1;
+    }
+  });
+  return count;
+}
+
+/** Chrome 專屬的 JS heap 用量；其他瀏覽器不支援時回傳 null。 */
+function readUsedHeapBytes(): number | null {
+  const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
+  return memory ? memory.usedJSHeapSize : null;
+}
+
 /**
  * Game —— 唯一持有 renderer / scene / camera 的地方（避免 global mutable state）。
  * 負責渲染迴圈、自由攝影機，以及把所有子系統接起來。
@@ -54,6 +71,7 @@ export class Game {
       {
         antCount: DEFAULT_ANT_COUNT,
         flowerCount: DEFAULT_FLOWER_COUNT,
+        coarseCharacter: false,
         instancing: true,
         lod: true,
         distanceCulling: true,
@@ -115,6 +133,9 @@ export class Game {
       case 'flowerCount':
         this.world.setFlowerCount(settings.flowerCount);
         break;
+      case 'coarseCharacter':
+        this.world.setCoarseCharacterVisible(settings.coarseCharacter);
+        break;
       case 'instancing':
         if (!settings.instancing && settings.antCount > MAX_NON_INSTANCED_ANTS) {
           this.debugPanel.setNote(`Instancing OFF：已限制為 ${MAX_NON_INSTANCED_ANTS} 隻`);
@@ -175,6 +196,10 @@ export class Game {
         visibleAnts: this.world.ants.visibleCount,
         fps: this.debugPanel.readout.fps,
         frameTime: this.debugPanel.readout.frameTime,
+        objects: countMeshes(this.scene),
+        geometries: this.renderer.info.memory.geometries,
+        textures: this.renderer.info.memory.textures,
+        usedHeapBytes: readUsedHeapBytes(),
       }),
     };
 

@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-28T10:46:23.425Z",
+  "capturedAt": "2026-09-29T04:04:01.253Z",
   "renderer": "headless Chromium / SwiftShader（CPU 軟體渲染，FPS 無參考價值）",
   "viewport": {
     "width": 1600,
@@ -12,20 +12,20 @@
       "note": "預設俯瞰視角，含 ground / house / tree / flower / character / ant",
       "mean": [
         103,
-        152,
+        151,
         109
       ],
-      "colorBuckets": 214
+      "colorBuckets": 215
     },
     {
       "file": "02-scale-lineup.png",
       "note": "尺度對照：相機位於 House 與 Character 等距點，兩者受透視影響相同；先隱藏螞蟻與花",
       "mean": [
         109,
-        162,
+        161,
         130
       ],
-      "colorBuckets": 87
+      "colorBuckets": 88
     },
     {
       "file": "03-house-facade.png",
@@ -35,47 +35,47 @@
         145,
         120
       ],
-      "colorBuckets": 83
+      "colorBuckets": 87
     },
     {
       "file": "04-character-full.png",
       "note": "Character 全身，檢查身體比例",
       "mean": [
-        103,
+        104,
         135,
-        109
+        110
       ],
-      "colorBuckets": 124
+      "colorBuckets": 132
     },
     {
       "file": "05-character-face.png",
       "note": "Character 頭部特寫，檢查眼睛 / 眉毛 / 鼻 / 嘴 / 髮型",
       "mean": [
-        88,
         98,
-        81
+        105,
+        86
       ],
-      "colorBuckets": 114
+      "colorBuckets": 123
     },
     {
       "file": "06-tree.png",
       "note": "Tree 混合尺度（樹幹 4 → 枝幹 2.5 → 樹葉 2.1~2.6），檢查樹冠是否成形",
       "mean": [
-        101,
-        150,
+        102,
+        149,
         108
       ],
-      "colorBuckets": 134
+      "colorBuckets": 128
     },
     {
       "file": "07-flowers-ground.png",
       "note": "花卉群（200 朵）：相機在花圈外，避免貼在花上",
       "mean": [
-        107,
-        144,
-        114
+        108,
+        143,
+        116
       ],
-      "colorBuckets": 273
+      "colorBuckets": 275
     },
     {
       "file": "08-ant-field.png",
@@ -85,17 +85,27 @@
         138,
         69
       ],
-      "colorBuckets": 139
+      "colorBuckets": 148
     },
     {
       "file": "09-ant-closeup.png",
       "note": "螞蟻近距離（1,000 隻）：鏡頭對準編號 #7 的個體（位置 x=8.16 z=48.50，朝向約 75.7°），採 3/4 前側視角，才看得到頭部觸角與三節身體",
       "mean": [
-        104,
-        111,
-        90
+        103,
+        117,
+        92
       ],
-      "colorBuckets": 102
+      "colorBuckets": 101
+    },
+    {
+      "file": "10-character-compare.png",
+      "note": "Phase 3 A/B 對照：左為 Minecraft-like 粗方塊角色（6 個大立方體、無臉），右為多尺度細方塊角色",
+      "mean": [
+        103,
+        119,
+        98
+      ],
+      "colorBuckets": 112
     }
   ],
   "instancingComparison": [
@@ -103,65 +113,106 @@
       "antCount": 0,
       "instancing": true,
       "label": "baseline",
+      "case": null,
       "drawCalls": 47,
       "triangles": 10202,
       "visibleAnts": 0,
-      "fps": 59.34299677060773,
-      "frameTime": 16.851188083162235
+      "fps": 60.41662193739448,
+      "frameTime": 16.551736391952367,
+      "objects": 59,
+      "geometries": 50,
+      "textures": 0,
+      "usedHeapBytes": 10000000
     },
     {
       "antCount": 100,
       "instancing": true,
+      "label": "A ON",
+      "case": "A",
       "drawCalls": 49,
       "triangles": 13730,
       "visibleAnts": 70,
-      "fps": 59.97997045605547,
-      "frameTime": 16.672232286820705
+      "fps": 60.51819062946159,
+      "frameTime": 16.523957335782903,
+      "objects": 59,
+      "geometries": 50,
+      "textures": 0,
+      "usedHeapBytes": 10000000
     },
     {
       "antCount": 100,
       "instancing": false,
+      "label": "A OFF",
+      "case": "A",
       "drawCalls": 69,
       "triangles": 14162,
       "visibleAnts": 70,
-      "fps": 59.281762543305454,
-      "frameTime": 16.86859427078434
+      "fps": 60.23825273485348,
+      "frameTime": 16.600747110007163,
+      "objects": 1059,
+      "geometries": 50,
+      "textures": 0,
+      "usedHeapBytes": 10000000
     },
     {
       "antCount": 1000,
       "instancing": true,
+      "label": "B ON",
+      "case": "B",
       "drawCalls": 49,
-      "triangles": 48002,
-      "visibleAnts": 746,
-      "fps": 38.78043270857651,
-      "frameTime": 25.78620015704065
+      "triangles": 48146,
+      "visibleAnts": 750,
+      "fps": 39.74945731502658,
+      "frameTime": 25.157576167007633,
+      "objects": 1059,
+      "geometries": 50,
+      "textures": 0,
+      "usedHeapBytes": 10000000
     },
     {
       "antCount": 1000,
       "instancing": false,
+      "label": "B OFF",
+      "case": "B",
       "drawCalls": 244,
       "triangles": 45662,
-      "visibleAnts": 746,
-      "fps": 40.467793519638256,
-      "frameTime": 24.711008756005413
+      "visibleAnts": 750,
+      "fps": 42.2985818490488,
+      "frameTime": 23.64145454258268,
+      "objects": 1059,
+      "geometries": 50,
+      "textures": 0,
+      "usedHeapBytes": 10000000
     },
     {
       "antCount": 10000,
       "instancing": true,
+      "label": "C ON",
+      "case": "C",
       "drawCalls": 49,
-      "triangles": 386222,
-      "visibleAnts": 7441,
-      "fps": 14.342131353336734,
-      "frameTime": 69.72464380388953
+      "triangles": 385358,
+      "visibleAnts": 7437,
+      "fps": 14.83204103016635,
+      "frameTime": 67.421604212538,
+      "objects": 1059,
+      "geometries": 50,
+      "textures": 0,
+      "usedHeapBytes": 10000000
     },
     {
       "antCount": 10000,
       "instancing": false,
+      "label": "C OFF",
+      "case": "C",
       "drawCalls": 244,
       "triangles": 45662,
-      "visibleAnts": 746,
-      "fps": 31.424429873288435,
-      "frameTime": 31.82237526765841
+      "visibleAnts": 750,
+      "fps": 34.06572937458694,
+      "frameTime": 29.35501509461297,
+      "objects": 1059,
+      "geometries": 50,
+      "textures": 0,
+      "usedHeapBytes": 10000000
     }
   ]
 }

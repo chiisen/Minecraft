@@ -13,7 +13,13 @@ export interface CameraView {
 }
 
 /** 可由腳本切換的布林設定（對應 DebugPanel 的 Rendering 區塊）。 */
-export type DebugFlagKey = 'instancing' | 'lod' | 'distanceCulling' | 'shadows' | 'wireframe';
+export type DebugFlagKey =
+  | 'instancing'
+  | 'lod'
+  | 'distanceCulling'
+  | 'shadows'
+  | 'wireframe'
+  | 'coarseCharacter';
 
 export interface VoxelDebugStats {
   /** `renderer.info.render.calls`，與 GPU 後端無關，可用於比較 Draw Call。 */
@@ -22,6 +28,13 @@ export interface VoxelDebugStats {
   readonly visibleAnts: number;
   readonly fps: number;
   readonly frameTime: number;
+  /** 場景中的 Mesh / InstancedMesh 數量。 */
+  readonly objects: number;
+  /** `renderer.info.memory.geometries`。 */
+  readonly geometries: number;
+  readonly textures: number;
+  /** Chrome 專屬 `performance.memory`；不支援時為 null（PRD §15 要求記錄 Memory）。 */
+  readonly usedHeapBytes: number | null;
 }
 
 export interface VoxelDebugApi {

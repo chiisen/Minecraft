@@ -110,22 +110,33 @@ const SHOTS = [
     flowerCount: 0,
     view: { position: [16.1, 3.2, 43.8], target: [8.16, 1.0, 48.5] },
   },
+  {
+    name: 'character-compare',
+    note: 'Phase 3 A/B 對照：左為 Minecraft-like 粗方塊角色（6 個大立方體、無臉），右為多尺度細方塊角色',
+    antCount: 0,
+    flowerCount: 0,
+    flags: { coarseCharacter: true },
+    view: { position: [5.5, 10.5, 28], target: [5.5, 10.5, 6] },
+  },
 ];
 
 /**
- * 量測矩陣：比較 Instancing ON / OFF。
+ * 量測矩陣：對應 PRD §20 Phase 2 的 Case A/B/C。
+ * 場景固定為 1 Character + 50 Flowers + {100,1000,10000} Ants，
+ * 每個 Case 都比較 Instancing OFF vs ON。
+ *
  * 第一列 antCount = 0 是基準線，用來扣掉「場景本身」（ground / house / tree / flower）
  * 就貢獻的 draw call 與三角形，讓其他列的螞蟻成本可以被單獨看出來。
  * 注意：`renderer.info.render.triangles` 是整帧總量，含場景其他物件。
  */
 const STATS_MATRIX = [
-  { antCount: 0, instancing: true, label: 'baseline' },
-  { antCount: 100, instancing: true },
-  { antCount: 100, instancing: false },
-  { antCount: 1000, instancing: true },
-  { antCount: 1000, instancing: false },
-  { antCount: 10_000, instancing: true },
-  { antCount: 10_000, instancing: false },
+  { antCount: 0, instancing: true, label: 'baseline', case: null },
+  { antCount: 100, instancing: true, label: 'A ON', case: 'A' },
+  { antCount: 100, instancing: false, label: 'A OFF', case: 'A' },
+  { antCount: 1000, instancing: true, label: 'B ON', case: 'B' },
+  { antCount: 1000, instancing: false, label: 'B OFF', case: 'B' },
+  { antCount: 10_000, instancing: true, label: 'C ON', case: 'C' },
+  { antCount: 10_000, instancing: false, label: 'C OFF', case: 'C' },
 ];
 
 const STATS_VIEW = { position: [0, 20, 40], target: [0, 0, 0] };
@@ -140,6 +151,7 @@ const DEFAULT_FLAGS = {
   distanceCulling: true,
   shadows: false,
   wireframe: false,
+  coarseCharacter: false,
 };
 
 function waitForServer(url, timeoutMs = 30_000) {
@@ -256,7 +268,11 @@ async function main() {
       images.push({ file: path.basename(file), note: shot.note, ...analysis });
     }
 
-    // 2) Instancing ON/OFF 量測
+    // 2) Phase 2 Benchmark（Case A/B/C）
+    // 先還原預設開關，避免最後一張 shot 的 flags（例如 coarseCharacter）污染量測。
+    for (const [key, value] of Object.entries(DEFAULT_FLAGS)) {
+      await page.evaluate(([k, v]) => window.__voxel.setFlag(k, v), [key, value]);
+    }
     await page.evaluate((n) => window.__voxel.setFlowerCount(n), 50);
     await page.evaluate((view) => window.__voxel.setCamera(view), STATS_VIEW);
 
@@ -291,13 +307,18 @@ async function main() {
       console.log(`  ${image.file}  mean=${image.mean.join(',')}  buckets=${image.colorBuckets}${blank}`);
     }
 
-    console.log('\nInstancing 比較（SwiftShader，FPS 僅供參考）：');
-    console.log('  ants    instancing  drawCalls  triangles  visibleAnts');
+    console.log('\nPhase 2 Benchmark（SwiftShader，FPS 僅供參考）：');
+    console.log('  case       ants  inst  drawCalls  triangles  visible  objects  geometries  heapMB');
     for (const row of stats) {
+      const heapMb = row.usedHeapBytes === null ? 'n/a' : (row.usedHeapBytes / 1048576).toFixed(1);
       console.log(
-        `  ${String(row.antCount).padStart(6)}  ${row.instancing ? 'ON ' : 'OFF'}        ${String(
-          row.drawCalls,
-        ).padStart(9)}  ${String(row.triangles).padStart(9)}  ${String(row.visibleAnts).padStart(11)}`,
+        `  ${String(row.label).padEnd(9)} ${String(row.antCount).padStart(6)}  ${
+          row.instancing ? 'ON ' : 'OFF'
+        }  ${String(row.drawCalls).padStart(9)}  ${String(row.triangles).padStart(9)}  ${String(
+          row.visibleAnts,
+        ).padStart(7)}  ${String(row.objects).padStart(7)}  ${String(row.geometries).padStart(
+          10,
+        )}  ${heapMb.padStart(6)}`,
       );
     }
 
