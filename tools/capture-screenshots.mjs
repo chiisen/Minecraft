@@ -62,10 +62,10 @@ const SHOTS = [
   },
   {
     name: 'house-facade',
-    note: 'House 正面（門面在 +z 側）。相機必須避開 Tree#2 的樹冠（z 25.7~40.1），否則會拍進樹冠內部',
+    note: 'House 正面（門面在 +z 側）。House 放大後總高約 31，相機需退到 z≈27 才框得下；再往後會撞進 Tree#2 的樹冠（z 28.3~42.7）',
     antCount: 0,
     flowerCount: 0,
-    view: { position: [-22, 13, 20], target: [-22, 9, -12] },
+    view: { position: [-22, 15, 27], target: [-22, 15, -12] },
   },
   {
     name: 'character-full',

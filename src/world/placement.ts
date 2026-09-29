@@ -28,10 +28,11 @@ export const COARSE_CHARACTER_POSITION = { x: 1, z: 6 } as const;
 export const TREE_COUNT = 3;
 /**
  * 樹木距原點的距離。
- * 34 時 Tree#1 的樹冠邊緣 (z = -22.1) 幾乎貼上 House 屋簷 (z = -22)，
- * 雖然實測沒有真正相交，但視覺上像穿模；改為 38 留出明確淨空。
+ * House 放大（總高約 31）後屋簷後緣約在 z = -24.5，
+ * 半徑 38 時 Tree 樹冠前緣 (z = -25.7) 與屋簷僅剩 1.2 淨空，視覺上偏擠；
+ * 改為 41，樹冠前緣退到約 z = -28.3，維持與原設計相近的明確淨空。
  */
-export const TREE_RADIUS = 38;
+export const TREE_RADIUS = 41;
 
 /** 三棵樹均分在同一圓周上。 */
 export function treePositions(): readonly { readonly x: number; readonly z: number }[] {
@@ -43,11 +44,11 @@ export function treePositions(): readonly { readonly x: number; readonly z: numb
 
 /**
  * 排除區域。半寬已含物件實際佔地：
- * House 含屋簷（±13 / ±10）與台階（+z 至 0）、Tree 含樹冠（半徑 7.2）、
+ * House 含屋簷（±16.5 / ±12.5）與台階（+z 至 14.5）、Tree 含樹冠（半徑 7.2）、
  * Character 含手臂與鞋子。呼叫端再依物件大小加上額外 margin。
  */
 export const GROUND_ZONES: readonly GroundZone[] = [
-  { x: HOUSE_POSITION.x, z: HOUSE_POSITION.z, halfX: 13.5, halfZ: 12.5 },
+  { x: HOUSE_POSITION.x, z: HOUSE_POSITION.z, halfX: 17.5, halfZ: 15.5 },
   { x: CHARACTER_POSITION.x, z: CHARACTER_POSITION.z, halfX: 4.5, halfZ: 4.5 },
   { x: COARSE_CHARACTER_POSITION.x, z: COARSE_CHARACTER_POSITION.z, halfX: 4.5, halfZ: 4.5 },
   ...treePositions().map((position) => ({

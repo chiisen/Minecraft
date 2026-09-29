@@ -185,17 +185,16 @@ draw call 來源（200 朵時 168 個 draw call，佔絕大多數）。相比之
 
 | 檢查項 | 結果 |
 |---|---|
-| 四個尺度（House > Human > Flower > Ant）共存不違和 | ❌ **不通過**（見下方 #7） |
+| 四個尺度（House > Human > Flower > Ant）共存不違和 | ✅ 通過（House 已放大，見「尺度修正」） |
 | Character 有 Voxel 特色、不是 Minecraft 式巨大方塊臉 | ✅ 通過 |
 | 近看可辨識眼睛 / 眉毛 / 鼻子 / 嘴巴 / 耳朵 / 髮型 | ✅ 通過（耳朵已修正，見下） |
 | 遠看維持整體統一視覺語言 | ✅ 通過 |
 
 ### 首輪發現的問題與處理
 
-1. **尺度順序錯誤（違反 PRD §7）** — 仍待決策
-   House 高 21、Character 高 21.5 → **Human ≥ House**。更明顯的是門高只有 8，
-   角色卻是 21.5，等於角色有 2.6 倍門高，根本進不去。轉往 issue
-   [#7](https://github.com/chiisen/Minecraft/issues/7)。
+1. **尺度順序錯誤（違反 PRD §7）** — ✅ 已修正（[#7](https://github.com/chiisen/Minecraft/issues/7)）
+   首輪實測 House 高 21、Character 高 21.5 → **Human ≥ House**；門高只有 8，角色卻是
+   21.5。已將 House 放大為總高 31、門洞 14（詳見下方「尺度修正」）。
 
 2. **物件擺放互相穿模** — ✅ 已修正（[#12](https://github.com/chiisen/Minecraft/issues/12)）
    花與螞蟻原本隨機撒在整個圓環／圓盤上，會穿過建築。改為在取樣時避開「排除區域」
@@ -210,7 +209,8 @@ draw call 來源（200 朵時 168 個 draw call，佔絕大多數）。相比之
    > 範圍內，頭部插進屋簷」。經實測，Character (10,6) 與 House (-22,-12) 的佔地
    > （x[-35,-9] z[-22,0] vs x[6,14] z[3,9]）**根本沒有重疊**，是誤把 House 的區域座標
    > 當成世界座標判讀。Tree 與 House 的幾何重疊體積實測為 0（僅 0.1 間隙，視覺上像前後
-   > 遮擋）；`TREE_RADIUS` 仍由 34 加大到 38，以消除視覺疑慮並留出明確淨空。
+   > 遮擋）；`TREE_RADIUS` 仍由 34 加大到 38，以消除視覺疑慮並留出明確淨空
+   > （House 放大後再調整為 41，見「尺度修正」）。
 
 3. **Tree 樹冠不成形** — ✅ 已修正（[#13](https://github.com/chiisen/Minecraft/issues/13)）
    原本在 46 次取樣、半徑 8 的球內只放進 22~33 顆方塊（覆蓋率僅 3.5%~5.2%），視覺上
@@ -251,9 +251,9 @@ draw call 來源（200 朵時 168 個 draw call，佔絕大多數）。相比之
   為螞蟻（#14）、花卉完整且貼地、花瓣十字完整（Phase 4）、房屋細節清楚。
 - 各物件的**渲染語言一致**（同一材質、vertex color），整體視覺不衝突。
 
-**未通過的部分**：PRD §7 明確要求視覺順序 `House > Human > Flower > Ant`。
-目前實測 Character 高 21.5、House 高 21（門高僅 8），Human **≥** House，且角色
-進不去門。轉往 issue #7 決策。
+**原本未通過的部分（現已修正）**：PRD §7 要求視覺順序 `House > Human > Flower > Ant`。
+首輪實測 Character 高 21.5、House 高 21（門高僅 8），Human **≥** House。issue #7 決定
+**只放大 House、不動 Character**，修正後 House 高 31（見下方「尺度修正」），順序已成立。
 
 ### 2. Character 是否明顯比傳統方塊人物自然？
 
@@ -335,16 +335,74 @@ draw call 來源（200 朵時 168 個 draw call，佔絕大多數）。相比之
 
 前置：
 
-1. **尺度決策（issue #7）**：目前唯一未通過的驗收項（Human ≥ House），進遊戲前需定。
+1. ~~**尺度決策（issue #7）**：目前唯一未通過的驗收項（Human ≥ House），進遊戲前需定。~~
+   → **已解決**：House 放大為總高 31，`House > Human` 成立（見「尺度修正」）。
 2. **實機 GPU 效能（issue #8）**：本 demo 在 SwiftShader 下無法評估真實效能，
    陰影 + 10,000 隻 InstancedMesh 的實機數字需補。
 
 總結：**通過但有限制地通過**。架構與「量測後再最佳化」的工程紀律都建立好了，
-剩下的工作是補齊實機數據與一個尺度決策。
+剩下的工作是補齊實機數據。
+
+## 尺度修正：放大 House 使 PRD §7 成立（issue #7）
+
+### 決策
+
+- `1 Unit` **維持為「最小可表示單位」**，不錨定現實公尺（符合 PRD §5）。
+  所有物件皆不縮放，僅調整 House 幾何。
+- **只動 House、不動 Character**（Character 維持 21.5）。「只加門高、不動 House」
+  在幾何上不可行——門高受牆高限制，且 House 總高仍 ≤ Character，`House > Human`
+  不會成立，因此必須整體放大 House。
+
+### 改動
+
+`src/objects/House.ts` 整體約 1.25 倍放大、高度拉到 31：
+
+| 部位 | 修正前 | 修正後 |
+|---|---:|---:|
+| 佔地（寬 × 深） | 24 × 18 | 30 × 22 |
+| 牆高 | 12 | 18 |
+| 門洞高 | 8 | 14 |
+| 屋頂總高 | 21 | **31** |
+| 屋簷（寬 × 深） | 26 × 20 | 33 × 25 |
+
+`src/world/placement.ts`：House 排除區域半寬 13.5 × 12.5 → **17.5 × 15.5**；
+`TREE_RADIUS` 38 → **41**（House 變深後屋簷後緣到 z = -24.5，半徑 38 時樹冠前緣
+僅剩 1.2 淨空，加大到 41 恢復約 3.8 的明確淨空）。
+
+`tools/capture-screenshots.mjs`：`03-house-facade` 相機退到 `z = 27`（再往後會撞進
+Tree#2 樹冠 z 28.3~42.7）。
+
+### 量測（以程式碼實測，不靠目測）
+
+各物件 bounding box（`/tmp` 量測腳本，`1 Unit = 最小可表示單位`）：
+
+| 物件 | prims | 寬 | 高 | 深 |
+|---|---:|---:|---:|---:|
+| **House** | 20 | 33.0 | **31.0** | 27.0 |
+| Character | 27 | 8.0 | 21.5 | 6.3 |
+| Tree | 171 | 14.5 | 27.3 | 14.4 |
+| Flower | 7 | 3.0 | 4.0 | 3.0 |
+| Ant | 15 | 4.6 | 1.9 | 2.3 |
+
+順序 **House(31) > Human(21.5) > Flower(4) > Ant(1.9)** 成立（Tree 不在 PRD §7 的
+排序要求內）。
+
+> **視覺工具誤判紀錄**：`connector__matrix__describe_images` 對 `02-scale-lineup.png`
+> 判讀為「Character 明顯比 House 高、比例完全顛倒」，與幾何矛盾。改以 Playwright
+> 於 `gl.readPixels` 讀實際 framebuffer 量測輪廓：House 屋頂最高點在畫面 y = 294
+> （x ≈ 640 的寬大屋頂結構），Character 最高點在 y = 322 → **House 在畫面上確實高
+> 28 px**。再次確認此視覺判讀工具在尺度問題上不可靠，以程式碼 / 像素量測為準。
+
+### 驗證
+
+- `npx tsc --noEmit` = 通過；`npm run build` 通過（525.48 kB / gzip 133.69 kB）。
+- 10 張截圖重跑、非空白，`console errors: 0`。
+- `03-house-facade.png` 判讀確認整棟 House 完整入鏡、屋頂未被裁切。
+- 重新量測 draw call / 三角形未回歸（baseline 20 draw call / 10,958 triangles）。
 
 ## 後續
 
-- 尺度比例：issue #7（**需決策**，目前唯一未通過的檢查項）
+- 尺度比例：issue #7（**已完成**，House 放大為總高 31）
 - 擺放穿模（#12）、Tree 樹冠（#13）、Ant 辨識度（#14）、Character 耳朵：**已修正並複驗**
 - Phase 2 效能 Benchmark（#4）：**已完成（SwiftShader）**，實機 GPU 數字待補
 - Phase 3 Character A/B 對照（#5）：**已完成**，結論為保留細尺度角色
