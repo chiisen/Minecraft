@@ -2,10 +2,12 @@
 
 本目錄的截圖與 `report.json` 全部由 `tools/capture-screenshots.mjs` 自動產生，可重現。
 
-> ⚠️ **這份報告的 FPS / Frame Time 沒有參考價值**——自動驗證跑在 headless Chromium +
-> SwiftShader（CPU 軟體渲染）。PRD §21 的 60 FPS 驗收必須在真實 GPU 上做，
-> 步驟見 **[`ON-DEVICE-MEASUREMENT.md`](ON-DEVICE-MEASUREMENT.md)**（issue #8）。
-> 與 GPU 無關的結構數字（draw call / triangles / vertices / objects / geometries）可直接引用。
+> ⚠️ **本報告的 FPS 請看「實機 GPU 效能」段落**——`report.json` 由
+> `npm run screenshots` 產生，跑在 headless Chromium + SwiftShader（CPU 軟體渲染），
+> 其 FPS 沒有參考價值。PRD §21 的 60 FPS 驗收已由
+> **實機 GPU 量測**（[`report-gpu.json`](report-gpu.json)）完成並通過。
+> SwiftShader 那份只取與 GPU 無關的結構數字（draw call / triangles / vertices /
+> objects / geometries）。
 
 對應 GitHub issues：
 
@@ -313,23 +315,26 @@ draw call 來源（200 朵時 168 個 draw call，佔絕大多數）。相比之
 
 ### 4. GPU 是否為主要瓶頸？
 
-**無法在本環境回答。** SwiftShader 是 CPU 軟體渲染，無法區分 GPU vs CPU 瓶頸。
-`renderer.info` 提供的 draw call / triangle / geometry 數與 GPU 後端無關，可以單獨評估。
+**不是。** 實機量測（Apple M6，1920×1080，見上方「實機 GPU 效能」）已能回答。
 
-需要你在實機 GPU 上跑一次 Phase 2 表格，才能回答。
+最重負載（10,000 隻螞蟻 + Shadows ON、386,798 三角形、773,596 頂點）：
+解除 vsync 後 **1.40 ms/幀**，只佔 16.6 ms 預算的 **8.4%**（714 FPS）。
+開陰影幾乎不增加成本（開 714.0 vs 關 712.7 FPS，差異在雜訊範圍內）。
+
+> 本題原先標記「無法在本環境回答」，原因是當時只有 SwiftShader 數據；
+> issue #8 補上實機 GPU 量測後已更新結論。
 
 ### 5. CPU 是否為主要瓶頸？
 
-**SwiftShader 下是，但這是工具限制不是真的 CPU 瓶頸。** SwiftShader 把 fillrate 全
-丟回 CPU，所以 FPS 數字反映的是 CPU 光柵化成本。C ON 在 SwiftShader 下掉到 14.6 FPS，
-純粹是 38.6 萬三角形 × 7,392 instance 的 CPU 模擬繪製負擔，**不可推論實機 GPU 表現**。
+**不是。** 整幀（含 JS 端 instance matrix 更新、LOD 與距離剔除計算）
+在實機上為 **1.33~1.71 ms**，遠低於 60 FPS 的 16.6 ms 預算。CPU 與 GPU 都有大量餘裕。
 
-實機 CPU vs GPU 切分需 issue #4 / #8 補測，步驟見
-[`ON-DEVICE-MEASUREMENT.md`](ON-DEVICE-MEASUREMENT.md)。
+> 註：SwiftShader 下 C ON 掉到 14.6 FPS，那是 CPU 軟體光柵化的工具限制，
+> **不可推論真實 CPU 或 GPU 表現**——實機量測顯示兩邊都遠未被觸及。
 
 ### 6. Draw Call 是否為主要瓶頸？
 
-**Phase 4 之前是花卉、之後已不是（以本環境能驗證的範圍為準）。**
+**曾經是花卉；Phase 4 修正後已不是，實機量測也證實它從來不是最終瓶頸。**
 
 量測事實：
 
@@ -345,30 +350,33 @@ draw call 來源（200 朵時 168 個 draw call，佔絕大多數）。相比之
 - **螞蟻**Instancing 早已就緒：10,000 隻只有 2 個 draw call。
 - OFF 模式 1,000 隻就要 216 draw call，且 C OFF 被 `MAX_NON_INSTANCED_ANTS = 1000`
   截斷——這是 PRD 強制安全上限，刻意不讓瀏覽器崩潰。
+- **實機佐證**：OFF（213 draw call）與 ON（22 draw call）在 Apple M6 上
+  都是 60 FPS 鎖定、解除 vsync 後差距也在雜訊內。draw call 從 22 拉到 213
+  **沒有帶來可感知的效能損失**，說明本專案的負載遠低於 draw call 的臨界點。
 
 依 Rule 6，Hidden Face Removal、跨模型 Geometry Merge、LOD 擴充至 Character/House
-**暫不實作**（非量測到的瓶頸）。
+**不實作**（實機量測證實三者都不是瓶頸）。
 
 ### 7. 是否值得進入真正遊戲 Prototype？
 
-**值得，但有兩個前置需先處理。**
+**值得，前置項目已全部清除。**
 
 值得的理由（架構已被驗證）：
 
 - **Rule 1（`1 voxel != 1 Mesh`）成立**：每個 `VoxelModel` 只產生 1 個
   `BufferGeometry`；所有 model 共用同一份材質（vertex color）。`geometries` 數
-  在 10,000 隻螞蟻時仍維持 23，沒有隨個體數爆增。
+  在 10,000 隻螞蟻時仍維持 22，沒有隨個體數爆增。
 - **大量物件路徑已被驗證**：Ant Instancing / LOD / Distance Culling + Flower InstancedMesh，
   10,000 隻螞蟻只有 22 draw call。
+- **效能已在實機驗收**：1920×1080 全部 Case 60 FPS 無掉幀；解除 vsync 後
+  最重負載僅用掉 8.4% 幀預算（PRD §21 通過）。
 - **跨物件靜態擺放**用排除區域（exclusion zone）解掉（#12），不需 Physics Engine，
   符合 PRD 限制。
 
-前置：
+前置（皆已解除）：
 
-1. ~~**尺度決策（issue #7）**：目前唯一未通過的驗收項（Human ≥ House），進遊戲前需定。~~
-   → **已解決**：House 放大為總高 31，`House > Human` 成立（見「尺度修正」）。
-2. **實機 GPU 效能（issue #8）**：本 demo 在 SwiftShader 下無法評估真實效能，
-   陰影 + 10,000 隻 InstancedMesh 的實機數字需補。
+1. ~~**尺度決策（issue #7）**~~ → **已解決**：House 放大為總高 31。
+2. ~~**實機 GPU 效能（issue #8）**~~ → **已解決**：Apple M6 上全 Case 60 FPS。
 
 總結：**通過但有限制地通過**。架構與「量測後再最佳化」的工程紀律都建立好了，
 剩下的工作是補齊實機數據。
@@ -430,6 +438,82 @@ Tree#2 樹冠 z 28.3~42.7）。
 - `03-house-facade.png` 判讀確認整棟 House 完整入鏡、屋頂未被裁切。
 - 重新量測 draw call / 三角形未回歸（baseline 20 draw call / 10,958 triangles）。
 
+## 實機 GPU 效能（issue #8 / PRD §21）
+
+本節是**唯一有效的 FPS 數據來源**。用 `npm run bench:gpu` 在真實 GPU 上量測
+（`tools/bench-gpu.mjs`，1920×1080，每個 Case 暖身 1.5 秒後取樣 3 次中位數）。
+
+- **環境**：Apple M6（12 核 GPU、Metal 4）、macOS arm64、1920×1080 @ 60 Hz
+- **Renderer**：`ANGLE (Apple, ANGLE Metal Renderer: Apple M6)`
+- **原始數據**：[`report-gpu.json`](report-gpu.json)
+- `console errors: 0`
+
+> ⚠️ 與 `report.json`（SwiftShader）的 FPS **不可比較**；那份只取結構數字
+> （draw call / triangles / vertices / objects / geometries）。
+
+### Pass 1：vsync 鎖定（真實使用體驗，對應 PRD §21）
+
+| case | 螞蟻 | Inst | Shadows | **FPS** | Frame Time | Draw calls | Triangles | Vertices | visible |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|
+| baseline | 0 | ON | OFF | 60.1 | 16.65 ms | 20 | 10,958 | 21,916 | 0 |
+| A ON | 100 | ON | OFF | 60.0 | 16.67 ms | 22 | 14,306 | 28,612 | 65 |
+| A OFF | 100 | OFF | OFF | 60.3 | 16.59 ms | 37 | 14,018 | 28,036 | 65 |
+| B ON | 1,000 | ON | OFF | 60.3 | 16.57 ms | 22 | 47,822 | 95,644 | 740 |
+| B OFF | 1,000 | OFF | OFF | 59.7 | 16.75 ms | 213 | 45,698 | 91,396 | 740 |
+| C ON | 10,000 | ON | OFF | 59.8 | 16.73 ms | 22 | 386,798 | 773,596 | 7,392 |
+| C OFF | 10,000 | OFF | OFF | 59.7 | 16.74 ms | 213 | 45,698 | 91,396 | 740 |
+| **C SHADOW ON** | 10,000 | ON | **ON** | **59.7** | 16.76 ms | 22 | 386,798 | 773,596 | 7,392 |
+| C SHADOW OFF | 10,000 | ON | OFF | 60.4 | 16.56 ms | 22 | 386,798 | 773,596 | 7,392 |
+
+**結論：全部 Case 都鎖在 60 FPS，無掉幀 → PRD §21 通過。** 包含 issue #8 的重點
+（Shadows ON + 10,000 隻 InstancedMesh）。
+
+> 59.7~60.4 的落差是**量測雜訊**（每幀 16.6 ms 恰為 60 Hz 的整數倍），
+> 不是掉幀。真實掉幀會明顯偏離 16.6 ms。
+
+### Pass 2：解除 vsync / 刷新率上限（看離瓶頸還有多遠）
+
+只報 60 FPS 看不出餘裕——螢幕刷新率就是天花板。因此再加一輪
+`--disable-gpu-vsync --disable-frame-rate-limit`，量 GPU 實際能跑多快。
+
+| case | 螞蟻 | Inst | Shadows | **FPS** | **Frame Time** | vs 16.6 ms 預算 |
+|---|---:|---|---|---:|---:|---:|
+| baseline | 0 | ON | OFF | 708.7 | 1.41 ms | 11.8% |
+| A ON | 100 | ON | OFF | 752.1 | 1.33 ms | 8.0% |
+| A OFF | 100 | OFF | OFF | 697.0 | 1.43 ms | 8.6% |
+| B ON | 1,000 | ON | OFF | 748.3 | 1.34 ms | 8.1% |
+| B OFF | 1,000 | OFF | OFF | 746.5 | 1.34 ms | 8.1% |
+| C ON | 10,000 | ON | OFF | 712.7 | 1.40 ms | 8.4% |
+| C OFF | 10,000 | OFF | OFF | 725.9 | 1.38 ms | 8.3% |
+| C SHADOW ON | 10,000 | ON | **ON** | 714.0 | 1.40 ms | 8.4% |
+| C SHADOW OFF | 10,000 | ON | OFF | 585.4 | 1.71 ms | 10.3% |
+
+**結論：最嚴苛的 Case 只用掉 16.6 ms 幀預算的 8~12%，仍有近 10 倍餘裕。**
+
+> **雜訊提醒**：解除 vsync 後同一場景的數字波動較大——`C SHADOW OFF`（585.4）
+> 與 `C SHADOW ON`（714.0）的 draw call / triangles / vertices **完全相同**，
+> 卻差 129 FPS，證明這個 Pass 的**個位數不可逐筆比較**，只能看數量級。
+> `C SHADOW OFF` 是最後一列，跑在最後，可能受長時間運行的 GC 影響。
+> 判讀請以 Pass 1 為準，Pass 2 僅用於確認「離瓶頸還很遠」。
+
+### 對 Phase 5 Review 第 4、5 題的補答
+
+這兩題原本標記為「本環境無法回答」，現在有實機數據：
+
+- **第 4 題（GPU 是否為主要瓶頸）→ 不是。** 最重負載（10,000 隻 + 陰影、
+  77 萬頂點）只花 1.40 ms，佔 16.6 ms 預算的 8.4%。開陰影幾乎不增加成本
+  （714.0 vs 712.7 FPS，差異在雜訊範圍內）。
+- **第 5 題（CPU 是否為主要瓶頸）→ 不是。** 整幀（含 JS 端 instance matrix 更新）
+  1.3~1.7 ms，遠低於 16.6 ms 預算。CPU 與 GPU 都有大量餘裕。
+- **推論（PRD §19 Rule 6）**：既然 draw call（22 對 213）、三角形（38.7 萬）、
+  頂點（77 萬）都不是瓶頸，**Hidden Face Removal / Geometry Merge / LOD 擴充
+  皆無實質收益**，維持「量測到瓶頸才最佳化」的結論是正確的。
+
+## 實機量測步驟
+
+若要換一台機器重跑或手動量測，見
+[`ON-DEVICE-MEASUREMENT.md`](ON-DEVICE-MEASUREMENT.md)。
+
 ## PRD §15 Benchmark 欄位對照
 
 PRD §15 要求「不得只回報 FPS」，至少記錄下列欄位。目前狀態：
@@ -440,22 +524,31 @@ PRD §15 要求「不得只回報 FPS」，至少記錄下列欄位。目前狀�
 | Frame Time | `PerformanceMonitor` 自行計算 | ✅ |
 | Draw Calls | `renderer.info.render.calls` | ✅ |
 | Triangles | `renderer.info.render.triangles` | ✅ |
-| **Vertices** | `countVertices`（frustum-aware，見 Phase 2 段落） | ✅ 本輪補上 |
+| **Vertices** | `countVertices`（frustum-aware，見 Phase 2 段落） | ✅ |
 | Visible Objects | `InstanceManager.visibleCount` | ✅ |
 | Memory | `performance.memory`（Chrome 專屬，需 `--enable-precise-memory-info`） | ✅（有量化限制，見欄位說明） |
 
-Case A / B / C × Instancing ON / OFF 的矩陣已完整產出於 `report.json`。
+Case A / B / C × Instancing ON / OFF 的矩陣已完整產出於 `report.json`（SwiftShader，
+結構數字）與 `report-gpu.json`（實機 GPU，含 FPS / Frame Time）。
 
 ## 後續
 
+**PRD Phase 0–5 與所有驗收項皆已完成，無剩餘工作。**
+
 - 尺度比例：issue #7（**已完成**，House 放大為總高 31）
 - 擺放穿模（#12）、Tree 樹冠（#13）、Ant 辨識度（#14）、Character 耳朵：**已修正並複驗**
-- Phase 2 效能 Benchmark（#4）：**已完成（SwiftShader）**，實機 GPU 數字待補
+- Phase 2 效能 Benchmark（#4）：**已完成**，SwiftShader 結構數字 + 實機 GPU 數字
 - Phase 3 Character A/B 對照（#5）：**已完成**，結論為保留細尺度角色
 - Phase 4 花卉 InstancedMesh 最佳化（#6）：**已完成**，200 朵花 draw call 168 → 21
-- Phase 5 Review（#9）：**已完成**，7 個問題的回答見上方
-- PRD §15 Vertices 欄位：**已完成補上**（frustum-aware，並與三角形數交叉驗證）
-- **實機 GPU 效能：issue #4 / #8** — 唯一剩餘項目，需在真實 GPU 上驗證；
-  步驟見 [`ON-DEVICE-MEASUREMENT.md`](ON-DEVICE-MEASUREMENT.md)
+- Phase 5 Review（#9）：**已完成**，7 個問題全部有答案（第 4、5 題由 #8 的實機數據補上）
+- PRD §15 Vertices 欄位：**已完成**（frustum-aware，並與三角形數交叉驗證）
+- **實機 GPU 效能（#8）**：**已完成**，Apple M6 / 1920×1080 全 Case 60 FPS 無掉幀，
+  解除 vsync 後最重負載僅佔 8.4% 幀預算 → PRD §21 通過
+
+### 若要進入真正遊戲 Prototype
+
+架構與效能都已驗證通過。依 PRD §19 Rule 6，**不建議**為了未來犧牲目前簡潔度去加
+Hidden Face Removal / Geometry Merge / LOD 擴充——實機量測顯示當前負載距瓶頸還有
+近 10 倍餘裕。真到了需要的那天（負載再成長一個數量級）再量測、再最佳化。
 
 
