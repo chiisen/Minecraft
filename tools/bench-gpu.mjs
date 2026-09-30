@@ -26,6 +26,8 @@ import { fileURLToPath } from 'node:url';
 
 import { chromium } from 'playwright';
 
+import { assertReport } from './report-schema.mjs';
+
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..');
 const OUT_DIR = path.join(REPO_ROOT, 'docs', 'verification');
@@ -255,6 +257,9 @@ async function main() {
       vsyncLocked: vsyncRows,
       uncapped: uncappedRows,
     };
+
+    // schema 驗證先於寫檔：缺欄位 / 型別錯誤就中止，不留下無效報告。
+    assertReport(report, 'gpu');
 
     await writeFile(
       path.join(OUT_DIR, 'report-gpu.json'),
