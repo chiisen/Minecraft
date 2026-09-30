@@ -1,5 +1,7 @@
 # Multi-Scale Voxel Web Demo
 
+![demo0](images/demo.png)
+
 以 **Three.js + TypeScript + Vite** 實作的多尺度體素視覺驗證 Prototype。
 同一個場景裡放進 House / Tree / Human / Flower / Ant 五種尺度，驗證
 「不同尺度可以用同一套 Voxel 視覺語言呈現」這個核心命題。
