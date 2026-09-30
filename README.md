@@ -37,6 +37,7 @@ npm run dev        # 開發伺服器，預設 http://localhost:5173
 npm run build      # tsc --noEmit && vite build，輸出到 dist/
 npm run preview    # 預覽 production build
 npm run screenshots # 自動截圖驗證，輸出到 docs/verification/（見下）
+npm test           # Vitest 單元測試（sceneStats frustum culling 語意）
 ```
 
 ## 操作說明
